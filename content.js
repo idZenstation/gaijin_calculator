@@ -1,11 +1,8 @@
+import { SELECTORS, ERROR_MESSAGES } from './config.js';
+
 class PurchaseAnalyzer {
   constructor() {
     this.containerId = 'wt-purchase-stats-container';
-    this.requiredElements = [
-      '.profile__title.profile__title_small-margin',
-      '.showcase-item',
-      '.showcase-item__price'
-    ];
     this.init();
   }
 
@@ -17,45 +14,69 @@ class PurchaseAnalyzer {
       this.injectStyles();
       this.createContainer();
       await this.calculateStats();
+      this.setupMessageHandler();
     } catch (error) {
-      console.error('[WT Purchase Analyzer] Error:', error);
-      this.showError();
+      console.error('[WT Analyzer] Error:', error);
+      this.showError(error.message);
     }
   }
 
-  isValidEnvironment() {
-    // Проверка, что код выполняется в Chrome и на нужном домене
-    if (!navigator.userAgent.includes('Chrome')) {
-      console.warn('Extension works only in Chrome browsers');
-      return false;
-    }
-    
-    if (!window.location.href.includes('store.gaijin.net')) {
-      console.warn('Extension works only on store.gaijin.net');
-      return false;
-    }
+  // ========== Основные методы ==========
 
-    return true;
+  async calculateStats() {
+    try {
+      const items = await this.getValidItems();
+      if (items.length === 0) {
+        throw new Error(ERROR_MESSAGES.NO_ITEMS);
+      }
+
+      const stats = this.processItems(items);
+      this.updateUI(stats);
+    } catch (error) {
+      this.showError(error.message);
+    }
   }
 
-  async verifyPageRequirements() {
-    const checks = this.requiredElements.map(selector => 
-      this.waitForElement(selector, 5000)
+  // ========== Вспомогательные методы ==========
+
+  parsePrice(priceText) {
+    if (!priceText) return 0;
+    return parseFloat(
+      priceText.replace(/[^\d,.]/g, '')
+        .replace(/\s+/g, '')
+        .replace(',', '.')
     );
-    
-    await Promise.all(checks).catch(() => {
-      throw new Error('Required page elements not found');
+  }
+
+  waitForElement(selector, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+      const element = document.querySelector(selector);
+      if (element) return resolve(element);
+
+      const observer = new MutationObserver((_, obs) => {
+        const el = document.querySelector(selector);
+        if (el) {
+          obs.disconnect();
+          resolve(el);
+        }
+      });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+
+      setTimeout(() => {
+        observer.disconnect();
+        reject(new Error(`Timeout: ${selector} not found`));
+      }, timeout);
     });
   }
 
-  // ... (остальные методы остаются без изменений, но с заменой gaijin на wt)
+  // ... (остальные методы)
 }
 
-// Инициализация с задержкой для полной загрузки страницы
-if (document.readyState === 'complete') {
-  setTimeout(() => new PurchaseAnalyzer(), 500);
-} else {
-  window.addEventListener('load', () => {
-    setTimeout(() => new PurchaseAnalyzer(), 500);
-  });
+// Инициализация
+if (typeof PurchaseAnalyzer === 'function') {
+  new PurchaseAnalyzer();
 }

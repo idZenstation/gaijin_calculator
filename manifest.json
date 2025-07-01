@@ -1,20 +1,14 @@
 {
   "manifest_version": 3,
   "name": "War Thunder Purchase Analyzer",
-  "version": "1.0.3",
-  "description": "Unofficial extension to analyze your purchase history in War Thunder Store",
+  "version": "1.0.4",
+  "description": "UNOFFICIAL extension to analyze your Gaijin Store purchases",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "content_scripts": [{
-    "matches": ["*://store.gaijin.net/*"],
-    "js": ["content.js"],
-    "run_at": "document_end"
-  }],
-  "host_permissions": ["*://store.gaijin.net/*"],
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
@@ -24,5 +18,33 @@
       "128": "icons/icon128.png"
     }
   },
-  "permissions": ["storage"]
+  "content_scripts": [
+    {
+      "matches": ["*://store.gaijin.net/*"],
+      "js": ["content.js"],
+      "css": ["styles/stats.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "styles/*",
+        "privacy_policy.md",
+        "icons/icon16.png",
+        "icons/icon32.png"
+      ],
+      "matches": ["*://store.gaijin.net/*"]
+    }
+  ],
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://store.gaijin.net/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
 }

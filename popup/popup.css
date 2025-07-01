@@ -1,0 +1,19 @@
+/* popup/popup.css */
+body {
+  margin: 0;
+  padding: 12px;
+  font-family: Arial, sans-serif;
+  min-width: 200px;
+}
+
+.container {
+  text-align: center;
+}
+
+.disclaimer {
+  background-color: #fff8e1;
+  padding: 8px;
+  border-radius: 4px;
+  margin: 10px 0;
+  font-size: 12px;
+}

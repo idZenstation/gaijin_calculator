@@ -43,8 +43,5 @@
   ],
   "host_permissions": [
     "*://store.gaijin.net/*"
-  ],
-  "background": {
-    "service_worker": "background.js"
-  }
+  ]
 }

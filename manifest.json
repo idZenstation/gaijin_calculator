@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Gaijin Donat Total",
+  "version": "2.1",
+  "description": "Подсчитывает общую сумму покупок в Gaijin Store",
+  "icons": {
+    "48": "icons/icon.png"
+  },
+  "content_scripts": [{
+    "matches": ["*://store.gaijin.net/user.php?view=purchases*"],
+    "js": ["content.js"],
+    "run_at": "document_end"
+  }],
+  "action": {
+    "default_icon": "icon.png",
+    "default_title": "Gaijin Donat Total"
+  }
+}

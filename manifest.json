@@ -4,18 +4,15 @@
   "version": "1.0",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "scripting"
   ],
   "host_permissions": [
-    "https://store.gaijin.net/user.php*"
+    "https://store.gaijin.net/*"
   ],
-  "content_scripts": [
-    {
-      "matches": ["https://store.gaijin.net/user.php*"],
-      "js": ["content.js"],
-      "run_at": "document_idle"
-    }
-  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

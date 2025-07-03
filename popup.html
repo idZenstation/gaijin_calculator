@@ -5,23 +5,51 @@
     <title>Gaijin Purchase Stats</title>
     <style>
         body {
-          width: 200px;
-          padding: 10px;
+          width: 250px;
+          padding: 15px;
           font-family: Arial, sans-serif;
         }
         #stats {
-          margin-top: 10px;
+          margin: 15px 0;
+          padding: 10px;
+          background: #f5f5f5;
+          border-radius: 4px;
         }
         button {
-          margin-top: 10px;
-          padding: 5px 10px;
+          width: 100%;
+          padding: 8px;
+          margin: 5px 0;
+          background: #4285f4;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+        button:hover {
+          background: #3367d6;
+        }
+        .loader {
+          border: 3px solid #f3f3f3;
+          border-top: 3px solid #4285f4;
+          border-radius: 50%;
+          width: 20px;
+          height: 20px;
+          animation: spin 1s linear infinite;
+          margin: 10px auto;
+          display: none;
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-<h3>Gaijin Stats</h3>
-<div id="stats">Loading...</div>
+<h3 style="text-align: center;">Gaijin Store Stats</h3>
+<div id="stats">Press "Calculate" to get statistics</div>
+<button id="calculate">Calculate</button>
 <button id="refresh">Refresh</button>
+<div class="loader" id="loader"></div>
 
 <script src="popup.js"></script>
 </body>

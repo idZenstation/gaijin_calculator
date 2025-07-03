@@ -1,1 +1,0 @@
-# gaijin_calculator

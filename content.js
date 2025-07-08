@@ -1,54 +1,51 @@
-function parsePopupContent(html) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-  const popup = doc.querySelector('.popup__content');
+function parsePurchases(html) {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const popup = doc.querySelector('.popup__content');
 
-  if (!popup) {
-    console.error('Полученный HTML:', html); // Для отладки
-    throw new Error('Popup с данными не найден в ответе');
-  }
+    if (!popup) throw new Error('Popup container not found in HTML');
 
-  const items = popup.querySelectorAll('.showcase-item-comment');
-  const results = {
-    total: 0,
-    count: 0,
-    purchases: []
-  };
+    const items = popup.querySelectorAll('.showcase-item-comment');
+    const result = {
+      total: 0,
+      count: 0,
+      purchases: []
+    };
 
-  items.forEach(item => {
-    const title = item.querySelector('.showcase-item-comment__title')?.textContent.trim();
-    const counter = parseInt(item.querySelector('.showcase-item-comment__counter')?.textContent) || 1;
-    const dateInfo = item.querySelector('.showcase-item-comment__item div')?.textContent.trim().split(' - ');
+    items.forEach(item => {
+      const title = item.querySelector('.showcase-item-comment__title')?.textContent.trim() || '';
+      const priceMatch = title.match(/[₽$€£](\d+[\.,]\d{2})/);
+      if (!priceMatch) return;
 
-    // Парсим цену (формат: "Название ₽100.00")
-    const priceMatch = title?.match(/[₽$€£](\d+[\.,]\d{2})/);
-    if (!priceMatch) return;
+      const price = parseFloat(priceMatch[1].replace(',', '.'));
+      const count = parseInt(item.querySelector('.showcase-item-comment__counter')?.textContent || '1');
+      const [date, recipient] = (item.querySelector('.showcase-item-comment__item div')?.textContent || ' - ')
+        .split(' - ')
+        .map(s => s.trim());
 
-    const price = parseFloat(priceMatch[1].replace(',', '.'));
-
-    results.total += price * counter;
-    results.count += counter;
-    results.purchases.push({
-      title: title.replace(priceMatch[0], '').trim(),
-      price: price,
-      currency: priceMatch[0][0],
-      count: counter,
-      date: dateInfo?.[0],
-      recipient: dateInfo?.[1]
+      result.total += price * count;
+      result.count += count;
+      result.purchases.push({
+        title: title.replace(priceMatch[0], '').trim(),
+        price,
+        currency: priceMatch[0][0],
+        count,
+        date,
+        recipient
+      });
     });
-  });
 
-  return results;
+    return { status: 'success', data: result };
+  } catch (error) {
+    return { status: 'error', error: error.message };
+  }
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'parsePurchases') {
-    try {
-      const data = parsePopupContent(request.html);
-      sendResponse({ success: true, data });
-    } catch (error) {
-      sendResponse({ success: false, error: error.message });
-    }
+    const result = parsePurchases(request.html);
+    sendResponse(result);
   }
   return true;
 });

@@ -1,71 +1,69 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const calculateBtn = document.getElementById('calculate');
-  const resultDiv = document.getElementById('result');
-  let isProcessing = false;
-
-  calculateBtn.addEventListener('click', async () => {
-    if (isProcessing) return;
-    isProcessing = true;
-    calculateBtn.disabled = true;
-    resultDiv.innerHTML = '<p class="loading">Загрузка данных...</p>';
-
-    try {
-      // Шаг 1: Получаем HTML через background.js
-      const { html, error: fetchError } = await chrome.runtime.sendMessage({
-        action: 'fetchPurchases'
-      });
-
-      if (fetchError) throw new Error(fetchError);
-
-      // Шаг 2: Получаем активную вкладку
-      const [tab] = await chrome.tabs.query({
-        active: true,
-        currentWindow: true
-      });
-
-      if (!tab) throw new Error('Не найдена активная вкладка');
-
-      // Шаг 3: Отправляем HTML в content.js для парсинга
-      const injectionResults = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ['content.js']
-      });
-
-      const { success, data, error: parseError } = await chrome.tabs.sendMessage(
-        tab.id,
-        {
-          action: 'parseHTML',
-          html
-        }
-      );
-
-      if (!success) throw new Error(parseError);
-
-      // Шаг 4: Отображаем результаты
-      resultDiv.innerHTML = `
-        <h3>Статистика покупок</h3>
-        <p><strong>Всего покупок:</strong> ${data.count}</p>
-        <p><strong>Общая сумма:</strong> ${data.total.toFixed(2)}</p>
-        ${data.currencies.map(c => `
-          <div class="currency-item">${c}</div>
-        `).join('')}
-        <p><small>Последнее обновление: ${new Date().toLocaleTimeString()}</small></p>
-      `;
-    } catch (error) {
-      console.error('Ошибка:', error);
-      resultDiv.innerHTML = `
-        <p class="error">Ошибка: ${error.message}</p>
-        <p>Попробуйте:</p>
-        <ol>
-          <li>Открыть <a href="https://store.gaijin.net/user.php?view=purchases" target="_blank">страницу покупок</a></li>
-          <li>Войти в аккаунт</li>
-          <li>Обновить страницу (F5)</li>
-          <li>Попробовать снова</li>
-        </ol>
-      `;
-    } finally {
-      isProcessing = false;
-      calculateBtn.disabled = false;
+function parsePurchasesData() {
+  try {
+    const popupContent = document.querySelector('.popup__content');
+    if (!popupContent) {
+      throw new Error('Блок с информацией о покупках не найден');
     }
-  });
+
+    const items = Array.from(popupContent.querySelectorAll('.showcase-item-comment'));
+    if (items.length === 0) {
+      throw new Error('Список покупок пуст');
+    }
+
+    let totalSpent = 0;
+    let purchaseCount = 0;
+    const purchases = [];
+
+    items.forEach(item => {
+      const titleElement = item.querySelector('.showcase-item-comment__title');
+      const counterElement = item.querySelector('.showcase-item-comment__counter');
+      const dateElement = item.querySelector('.showcase-item-comment__item div');
+
+      if (!titleElement || !dateElement) return;
+
+      const title = titleElement.textContent.trim();
+      const counter = counterElement ? parseInt(counterElement.textContent) || 1 : 1;
+      const dateText = dateElement.textContent.trim();
+      const priceMatch = title.match(/[₽$€£]\s*([\d,.]+)/);
+
+      if (priceMatch) {
+        const price = parseFloat(priceMatch[1].replace(',', ''));
+        totalSpent += price * counter;
+        purchaseCount += counter;
+
+        purchases.push({
+          title: title.replace(priceMatch[0], '').trim(),
+          price: price,
+          currency: priceMatch[0].trim(),
+          count: counter,
+          date: dateText.split(' - ')[0].trim(),
+          recipient: dateText.split(' - ')[1]?.trim()
+        });
+      }
+    });
+
+    return {
+      success: true,
+      data: {
+        total: totalSpent,
+        count: purchaseCount,
+        purchases: purchases,
+        currencies: Array.from(new Set(purchases.map(p => p.currency)))
+      }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+// Отправляем данные при запросе
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'getPurchases') {
+    const result = parsePurchasesData();
+    sendResponse(result);
+  }
+  return true;
 });

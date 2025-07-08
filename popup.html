@@ -2,68 +2,57 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gaijin Calculator</title>
+    <title>Gaijin Purchase Calculator</title>
     <style>
         body {
-          width: 300px;
+          width: 400px;
           padding: 15px;
           font-family: 'Segoe UI', Arial, sans-serif;
-          background-color: #f5f5f5;
-          color: #333;
-        }
-        h2 {
-          margin-top: 0;
-          color: #1a73e8;
-          font-size: 18px;
-          text-align: center;
         }
         button {
-          width: 100%;
-          padding: 10px;
-          margin: 10px 0;
-          background-color: #1a73e8;
+          background: #4CAF50;
           color: white;
           border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          font-weight: bold;
-          transition: background-color 0.3s;
-        }
-        button:hover {
-          background-color: #0d62c9;
-        }
-        button:disabled {
-          background-color: #cccccc;
-          cursor: not-allowed;
-        }
-        #result {
-          margin-top: 15px;
           padding: 10px;
-          background-color: white;
-          border-radius: 4px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          width: 100%;
+          cursor: pointer;
+          margin: 10px 0;
+        }
+        .loading, .error {
+          padding: 10px;
+          margin: 10px 0;
         }
         .error {
+          background: #ffebee;
           color: #d32f2f;
+        }
+        .purchases-list li {
+          margin: 8px 0;
+          padding: 8px;
+          border-bottom: 1px solid #eee;
+          display: grid;
+          grid-template-columns: 100px 1fr 80px;
+        }
+        .date {
+          color: #666;
+          font-size: 0.9em;
+        }
+        .price {
+          text-align: right;
           font-weight: bold;
         }
-        .currency-item {
-          margin: 5px 0;
-          padding: 3px 0;
-          border-bottom: 1px solid #eee;
-        }
-        .loading {
-          text-align: center;
-          color: #1a73e8;
+        .recipient {
+          grid-column: 2 / 4;
+          font-size: 0.8em;
+          color: #2196F3;
         }
     </style>
 </head>
 <body>
-<h2>Калькулятор покупок Gaijin</h2>
-<button id="calculate">Рассчитать сумму</button>
+<h2>Gaijin Store Calculator</h2>
+<button id="calculate">Рассчитать покупки</button>
 <div id="result">
-    <p>Откройте страницу <a href="https://store.gaijin.net/user.php?view=purchases" target="_blank">истории покупок</a> и нажмите кнопку</p>
+    <p>Откройте страницу истории покупок Gaijin и нажмите кнопку</p>
 </div>
 <script src="popup.js"></script>
 </body>

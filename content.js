@@ -2,11 +2,19 @@ function parsePurchases(html) {
   try {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
-    const popup = doc.querySelector('.popup__content');
 
-    if (!popup) throw new Error('Popup container not found in HTML');
+    // Ищем основную таблицу покупок
+    const table = doc.querySelector('#purchases-history, .purchase-history-table');
+    if (!table) {
+      throw new Error('Purchase history table not found');
+    }
 
-    const items = popup.querySelectorAll('.showcase-item-comment');
+    // Альтернативные селекторы для элементов
+    const items = table.querySelectorAll('tbody tr, .purchase-item');
+    if (items.length === 0) {
+      throw new Error('No purchase items found');
+    }
+
     const result = {
       total: 0,
       count: 0,
@@ -14,38 +22,57 @@ function parsePurchases(html) {
     };
 
     items.forEach(item => {
-      const title = item.querySelector('.showcase-item-comment__title')?.textContent.trim() || '';
-      const priceMatch = title.match(/[₽$€£](\d+[\.,]\d{2})/);
-      if (!priceMatch) return;
+      try {
+        // Ищем элементы с информацией
+        const titleEl = item.querySelector('.showcase-item-comment__title, .item-title');
+        const priceEl = item.querySelector('td:nth-child(4), .item-price');
+        const dateEl = item.querySelector('.showcase-item-comment__item, .item-date');
 
-      const price = parseFloat(priceMatch[1].replace(',', '.'));
-      const count = parseInt(item.querySelector('.showcase-item-comment__counter')?.textContent || '1');
-      const [date, recipient] = (item.querySelector('.showcase-item-comment__item div')?.textContent || ' - ')
-        .split(' - ')
-        .map(s => s.trim());
+        if (!titleEl || !priceEl || !dateEl) return;
 
-      result.total += price * count;
-      result.count += count;
-      result.purchases.push({
-        title: title.replace(priceMatch[0], '').trim(),
-        price,
-        currency: priceMatch[0][0],
-        count,
-        date,
-        recipient
-      });
+        const title = titleEl.textContent.trim();
+        const priceText = priceEl.textContent.trim();
+        const dateInfo = dateEl.textContent.trim();
+
+        // Парсим цену (поддерживаем ₽/$/€ и форматы типа "100.00 RUB")
+        const priceMatch = priceText.match(/([₽$€]|RUB|USD|EUR)\s*([\d,.]+)/) ||
+                         title.match(/([₽$€]|RUB|USD|EUR)\s*([\d,.]+)/);
+
+        if (!priceMatch) return;
+
+        const price = parseFloat(priceMatch[2].replace(',', '.'));
+        const currency = priceMatch[1].length > 1 ?
+                       {'RUB': '₽', 'USD': '$', 'EUR': '€'}[priceMatch[1]] :
+                       priceMatch[1];
+
+        // Парсим дату и получателя
+        const [date, recipient = 'Yourself'] = dateInfo.split(' - ').map(s => s.trim());
+
+        result.total += price;
+        result.count++;
+        result.purchases.push({
+          title: title.replace(priceMatch[0], '').trim(),
+          price,
+          currency,
+          date,
+          recipient
+        });
+      } catch (e) {
+        console.warn('Failed to parse item:', e);
+      }
     });
 
+    if (result.count === 0) {
+      throw new Error('No valid purchases found after parsing');
+    }
+
     return { status: 'success', data: result };
+
   } catch (error) {
-    return { status: 'error', error: error.message };
+    return {
+      status: 'error',
+      error: error.message,
+      htmlSnippet: html.substring(0, 500) + '...'
+    };
   }
 }
-
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'parsePurchases') {
-    const result = parsePurchases(request.html);
-    sendResponse(result);
-  }
-  return true;
-});

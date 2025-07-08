@@ -1,25 +1,32 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'fetchPurchases') {
-    const fetchUrl = `https://store.gaijin.net/user.php?view=purch_type&type=yuplay&project=wt&rand=${Math.random()}`;
-
-    fetch(fetchUrl, {
+    // Запрашиваем именно страницу истории покупок
+    fetch('https://store.gaijin.net/user.php?view=purchases&project=wt', {
       credentials: 'include',
-      headers: { 'Cache-Control': 'no-cache' }
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Accept': 'text/html'
+      }
     })
     .then(response => {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return response.text();
     })
     .then(html => {
-      if (!html.includes('popup__content')) {
-        throw new Error('Invalid response: missing popup content');
+      // Проверяем, что это действительно страница покупок
+      if (!html.includes('purchases-history') && !html.includes('showcase-item-comment')) {
+        throw new Error('Received incorrect page content');
       }
-      sendResponse({ status: 'success', html }); // Четкая структура ответа
+      sendResponse({ status: 'success', html });
     })
     .catch(error => {
-      sendResponse({ status: 'error', error: error.message });
+      sendResponse({
+        status: 'error',
+        error: error.message,
+        details: 'Failed to fetch purchase history'
+      });
     });
 
-    return true; // Оставляем канал открытым для асинхронного ответа
+    return true;
   }
 });

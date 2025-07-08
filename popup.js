@@ -1,56 +1,60 @@
 document.getElementById('calculate').addEventListener('click', async () => {
   const resultDiv = document.getElementById('result');
-  resultDiv.innerHTML = '<div class="loading">Loading...</div>';
+  resultDiv.innerHTML = '<div class="loading">Calculating...</div>';
 
   try {
-    // 1. Получаем HTML
+    console.log('[DEBUG] Sending fetch request...');
     const fetchResponse = await chrome.runtime.sendMessage({
       action: 'fetchPurchases'
     });
 
-    if (!fetchResponse || fetchResponse.status !== 'success') {
-      throw new Error(fetchResponse?.error || 'Failed to fetch data');
+    if (!fetchResponse) {
+      throw new Error('No response from background script');
     }
 
-    // 2. Парсим данные
+    console.log('[DEBUG] Fetch response:', fetchResponse.status);
+
+    if (fetchResponse.status !== 'success') {
+      throw new Error(fetchResponse.error || 'Failed to load purchase data');
+    }
+
+    console.log('[DEBUG] Sending parse request...');
     const parseResponse = await chrome.runtime.sendMessage({
       action: 'parsePurchases',
       html: fetchResponse.html
     });
 
+    console.log('[DEBUG] Parse response:', parseResponse);
+
     if (!parseResponse || parseResponse.status !== 'success') {
-      throw new Error(parseResponse?.error || 'Failed to parse data');
+      const errorDetails = parseResponse?.error
+        ? `${parseResponse.error}\n${parseResponse.htmlSnippet || ''}`
+        : 'Invalid parse response structure';
+      throw new Error(errorDetails);
     }
 
-    // 3. Отображаем результат
     displayResults(parseResponse.data);
+
   } catch (error) {
+    console.error('[ERROR] Main process failed:', error);
     resultDiv.innerHTML = `
       <div class="error">
-        <p>Error: ${error.message}</p>
-        <button id="retry-btn">Try Again</button>
+        <h4>Calculation Error</h4>
+        <pre>${error.message}</pre>
+        <button id="debug-btn">Show Debug Info</button>
+        <div id="debug-info" style="display: none;">
+          <h5>Technical Details:</h5>
+          <pre>${JSON.stringify({
+            error: error.stack,
+            timestamp: new Date().toISOString()
+          }, null, 2)}</pre>
+        </div>
       </div>
     `;
-    document.getElementById('retry-btn').addEventListener('click', () => {
-      document.getElementById('calculate').click();
+
+    document.getElementById('debug-btn').addEventListener('click', () => {
+      const debugDiv = document.getElementById('debug-info');
+      debugDiv.style.display = debugDiv.style.display === 'none' ? 'block' : 'none';
     });
   }
 });
-
-function displayResults(data) {
-  const resultDiv = document.getElementById('result');
-  resultDiv.innerHTML = `
-    <h3>Purchase Stats</h3>
-    <p>Total: ${data.count} items</p>
-    <p>Amount: ${data.total.toFixed(2)} ${data.purchases[0]?.currency || ''}</p>
-    <div class="purchase-list">
-      ${data.purchases.slice(0, 5).map(p => `
-        <div class="purchase-item">
-          <span>${p.date}</span>
-          <strong>${p.title}</strong>
-          <span>${p.price.toFixed(2)} × ${p.count}</span>
-        </div>
-      `).join('')}
-    </div>
-  `;
-}

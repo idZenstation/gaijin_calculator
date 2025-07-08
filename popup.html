@@ -4,35 +4,22 @@
     <meta charset="UTF-8">
     <title>Gaijin Calculator</title>
     <style>
-        body {
-            width: 200px;
-            padding: 10px;
-            font-family: Arial, sans-serif;
-        }
+        body { width: 300px; padding: 15px; font-family: Arial; }
         button {
-            width: 100%;
-            padding: 8px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-            margin-top: 10px;
+          padding: 10px;
+          background: #4CAF50;
+          color: white;
+          border: none;
+          cursor: pointer;
+          width: 100%;
         }
-        button:hover {
-            background: #45a049;
-        }
-        #status {
-            margin-top: 10px;
-            color: #666;
-            font-size: 12px;
-        }
+        #result { margin-top: 15px; }
     </style>
 </head>
 <body>
-<h3>Gaijin Calculator</h3>
-<p>Откройте страницу покупок для автоматического расчёта</p>
-<button id="calculate">Рассчитать вручную</button>
-<div id="status"></div>
+<h2>Gaijin Purchase Stats</h2>
+<button id="calculate">Рассчитать</button>
+<div id="result"></div>
 <script src="popup.js"></script>
 </body>
 </html>

@@ -1,32 +1,23 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const calculateBtn = document.getElementById('calculate');
-    const statusDiv = document.getElementById('status');
+document.addEventListener('DOMContentLoaded', () => {
+  const calculateBtn = document.getElementById('calculate');
+  const resultDiv = document.getElementById('result');
 
-    calculateBtn.addEventListener('click', function() {
-        statusDiv.textContent = "Запрос отправлен...";
+  calculateBtn.addEventListener('click', async () => {
+    resultDiv.innerHTML = '<p>Загрузка данных...</p>';
 
-        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            if (tabs.length === 0) {
-                statusDiv.textContent = "Ошибка: нет активной вкладки";
-                return;
-            }
-
-            const currentTab = tabs[0];
-
-            if (!currentTab.url.includes('store.gaijin.net/user.php')) {
-                statusDiv.textContent = "Откройте страницу покупок Gaijin";
-                return;
-            }
-
-            chrome.scripting.executeScript({
-                target: {tabId: currentTab.id},
-                files: ['content.js']
-            }).then(() => {
-                statusDiv.textContent = "Расчёт выполнен!";
-            }).catch(err => {
-                statusDiv.textContent = "Ошибка: " + err.message;
-                console.error(err);
-            });
-        });
-    });
+    chrome.runtime.sendMessage(
+      { action: 'getPurchases' },
+      (response) => {
+        if (response.error) {
+          resultDiv.innerHTML = `<p style="color: red;">Ошибка: ${response.error}</p>`;
+        } else {
+          resultDiv.innerHTML = `
+            <h3>Статистика покупок</h3>
+            <p>Всего покупок: ${response.count}</p>
+            <p>Общая сумма: ${response.total.toFixed(2)} USD</p>
+          `;
+        }
+      }
+    );
+  });
 });

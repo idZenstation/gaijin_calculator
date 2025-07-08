@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Gaijin Purchase Calculator",
+  "name": "Gaijin Purchase Stats",
   "version": "1.0",
   "permissions": [
     "activeTab",
@@ -10,9 +10,6 @@
   "host_permissions": [
     "https://store.gaijin.net/*"
   ],
-  "background": {
-    "service_worker": "background.js"
-  },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

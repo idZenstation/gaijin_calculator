@@ -1,135 +1,88 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  const statsDiv = document.getElementById('stats');
-  const calculateBtn = document.getElementById('calculate');
-  const refreshBtn = document.getElementById('refresh');
-  const loader = document.getElementById('loader');
+    const statsDiv = document.getElementById('stats');
+    const calculateBtn = document.getElementById('calculate');
+    const loader = document.getElementById('loader');
 
-  // Функция для отображения статуса
-  function showStatus(message, isError = false) {
-    statsDiv.innerHTML = `
-      <p style="color: ${isError ? 'red' : 'inherit'};">
-        ${message}
-      </p>
-    `;
-  }
+    async function fetchPurchaseData() {
+        try {
+            loader.style.display = 'block';
+            statsDiv.textContent = 'Fetching purchase data...';
 
-  // Основная функция расчета
-  async function calculateStats() {
-    try {
-      // Показываем индикатор загрузки
-      loader.style.display = 'block';
-      calculateBtn.disabled = true;
-      showStatus('Connecting to Gaijin Store...');
+            const [tab] = await chrome.tabs.query({
+                active: true,
+                currentWindow: true,
+                url: 'https://store.gaijin.net/user.php*'
+            });
 
-      // Получаем активную вкладку
-      const [tab] = await chrome.tabs.query({
-        active: true,
-        currentWindow: true
-      });
+            if (!tab) {
+                throw new Error('Please open Gaijin Store purchase history first!');
+            }
 
-      // Проверяем URL
-      if (!tab?.url?.includes('store.gaijin.net/user.php')) {
-        throw new Error('Please open Gaijin Store purchase history page first!');
-      }
+            // Получаем HTML страницы
+            const result = await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                func: () => {
+                    return {
+                        html: document.documentElement.outerHTML,
+                        url: window.location.href
+                    };
+                }
+            });
 
-      // 1. Внедряем content script
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ['content.js']
-      });
+            const pageData = result[0]?.result;
+            if (!pageData) {
+                throw new Error('Failed to get page data');
+            }
 
-      // 2. Выполняем расчет
-      const injectionResults = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: () => {
-          try {
-            return window.getPurchaseData();
-          } catch (e) {
-            return {
-              status: 'error',
-              error: e.message,
-              stack: e.stack
-            };
-          }
+            // Парсим данные
+            const parsedData = parsePurchaseData(pageData.html);
+
+            if (parsedData.status !== 'success') {
+                throw new Error(parsedData.error || 'No valid purchase data found');
+            }
+
+            // Сохраняем и отображаем
+            await chrome.storage.local.set({ gaijinStats: parsedData });
+            displayStats(parsedData);
+
+        } catch (error) {
+            console.error('Error:', error);
+            statsDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+        } finally {
+            loader.style.display = 'none';
         }
-      });
-
-      const result = injectionResults[0]?.result;
-      console.debug('Calculation result:', result);
-
-      if (!result) {
-        throw new Error('No response from content script');
-      }
-
-      if (result.status === 'error') {
-        throw new Error(`Content script error: ${result.error}`);
-      }
-
-      if (result.status === 'no_data') {
-        throw new Error('No purchase data found in table');
-      }
-
-      // Сохраняем и показываем результат
-      await chrome.storage.local.set({ gaijinStats: result });
-      showStats(result);
-
-    } catch (error) {
-      console.error('Calculation failed:', error);
-      showStatus(`Error: ${error.message}`, true);
-
-      // Дополнительная диагностика
-      if (error.message.includes('Cannot access contents')) {
-        showStatus(
-          'Extension needs permission. Refresh the page and try again.',
-          true
-        );
-      }
-    } finally {
-      loader.style.display = 'none';
-      calculateBtn.disabled = false;
     }
-  }
 
-  // Функция отображения статистики
-  function showStats(data) {
-    statsDiv.innerHTML = `
-      <div class="stat-item">
-        <span>Total purchases:</span>
-        <strong>${data.count}</strong>
-      </div>
-      <div class="stat-item">
-        <span>Total spent:</span>
-        <strong>${data.currency} ${data.total}</strong>
-      </div>
-      <div class="stat-item">
-        <span>Average:</span>
-        <strong>${data.currency} ${(data.total / data.count).toFixed(2)}</strong>
-      </div>
-      ${data.failedParses > 0 ? `
-        <div class="warning">
-          (${data.failedParses} entries skipped)
-        </div>
-      ` : ''}
-    `;
-  }
+    function displayStats(data) {
+        const currencySymbol = {
+            'RUB': '₽',
+            'USD': '$',
+            'EUR': '€'
+        }[data.currency] || data.currency;
 
-  // Обработчики кнопок
-  calculateBtn.addEventListener('click', calculateStats);
-
-  refreshBtn.addEventListener('click', async () => {
-    try {
-      const { gaijinStats } = await chrome.storage.local.get('gaijinStats');
-      if (gaijinStats) {
-        showStats(gaijinStats);
-      } else {
-        showStatus('No data available. Click Calculate first.');
-      }
-    } catch (error) {
-      console.error('Refresh failed:', error);
-      showStatus('Error loading saved data', true);
+        statsDiv.innerHTML = `
+            <h4>Purchase Statistics</h4>
+            <p>Total purchases: <strong>${data.count}</strong></p>
+            <p>Total spent: <strong>${currencySymbol} ${data.total}</strong></p>
+            <p>Average: <strong>${currencySymbol} ${(data.total / data.count).toFixed(2)}</strong></p>
+            <details>
+                <summary>Show details</summary>
+                <ul style="max-height: 150px; overflow-y: auto;">
+                    ${data.purchases.map(p => `
+                        <li>
+                            ${p.date} - ${p.title}: ${currencySymbol} ${p.price.toFixed(2)}
+                        </li>
+                    `).join('')}
+                </ul>
+            </details>
+        `;
     }
-  });
 
-  // Загружаем сохраненные данные при открытии
-  refreshBtn.click();
+    calculateBtn.addEventListener('click', fetchPurchaseData);
+
+    // Загружаем сохраненные данные при открытии
+    const { gaijinStats } = await chrome.storage.local.get('gaijinStats');
+    if (gaijinStats) {
+        displayStats(gaijinStats);
+    }
 });

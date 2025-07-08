@@ -1,70 +1,85 @@
-// Глобальная функция для доступа из popup
-window.getPurchaseData = function() {
-  try {
-    // 1. Находим таблицу
-    const table = document.querySelector('.table.user-payments');
-    if (!table) {
-      return { status: 'error', error: 'Purchase table not found' };
-    }
+function parsePurchaseData(html) {
+    try {
+        // Создаем временный DOM-элемент для парсинга
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
 
-    // 2. Получаем все строки
-    const rows = Array.from(table.querySelectorAll('tbody tr'));
-    if (rows.length === 0) {
-      return { status: 'no_data' };
-    }
-
-    // 3. Парсим данные
-    let total = 0;
-    let count = 0;
-    const failed = [];
-
-    rows.forEach((row, i) => {
-      try {
-        const priceCell = row.querySelector('td:nth-child(3)') || 
-                         row.querySelector('td.price');
-        
-        if (!priceCell) {
-          failed.push(`Row ${i}: No price cell`);
-          return;
+        // Находим все элементы с покупками
+        const items = doc.querySelectorAll('.showcase__item');
+        if (!items.length) {
+            return { status: 'no_data', error: 'No purchase items found' };
         }
 
-        const priceText = priceCell.textContent.trim();
-        const price = parsePrice(priceText);
-        
-        if (isNaN(price)) {
-          failed.push(`Row ${i}: Invalid price (${priceText})`);
-          return;
-        }
+        let total = 0;
+        let count = 0;
+        const purchases = [];
 
-        total += price;
-        count++;
-      } catch (e) {
-        failed.push(`Row ${i}: ${e.message}`);
-      }
-    });
+        items.forEach(item => {
+            try {
+                const priceElement = item.querySelector('.showcase-item-price');
+                if (!priceElement) return;
 
-    return {
-      status: count > 0 ? 'success' : 'no_data',
-      total: total.toFixed(2),
-      count,
-      currency: 'USD',
-      failedParses: failed.length
-    };
+                const priceText = priceElement.textContent.trim();
+                const price = parsePrice(priceText);
+                if (isNaN(price) return;
 
-  } catch (error) {
-    return {
-      status: 'error',
-      error: error.message,
-      stack: error.stack
-    };
-  }
-};
+                const title = item.querySelector('.showcase-item-description__title')?.textContent.trim() || 'Unknown';
+                const date = item.querySelector('.showcase-item__timestamp')?.textContent.trim() || '';
+                const game = item.querySelector('.inline-icon-label')?.className.match(/inline-icon-label_(\d+)/)?.[1] || '';
 
-// Функция парсинга цены
-function parsePrice(text) {
-  const clean = text
-    .replace(/[^\d.,]/g, '') // Оставляем только цифры и разделители
-    .replace(',', '.');      // Приводим к float формату
-  
-  return parseFloat(clean);
+                total += price;
+                count++;
+
+                purchases.push({
+                    title,
+                    price,
+                    currency: 'RUB', // По умолчанию, уточним ниже
+                    date,
+                    game
+                });
+            } catch (e) {
+                console.error('Error parsing item:', e);
+            }
+        });
+
+        // Определяем валюту (рубли по умолчанию)
+        const currency = determineCurrency(purchases);
+
+        return {
+            status: count > 0 ? 'success' : 'no_valid_data',
+            total: total.toFixed(2),
+            count,
+            currency,
+            purchases,
+            rawItems: items.length
+        };
+    } catch (error) {
+        return {
+            status: 'error',
+            error: error.message,
+            stack: error.stack
+        };
+    }
 }
+
+function parsePrice(text) {
+    // Удаляем все символы кроме цифр и десятичных разделителей
+    const clean = text.replace(/[^\d.,]/g, '')
+                      .replace(',', '.');
+    return parseFloat(clean) || 0;
+}
+
+function determineCurrency(purchases) {
+    // Анализируем покупки для определения валюты
+    if (purchases.some(p => p.priceText?.includes('€'))) return 'EUR';
+    if (purchases.some(p => p.priceText?.includes('$'))) return 'USD';
+    if (purchases.some(p => p.priceText?.includes('₽'))) return 'RUB';
+    return 'RUB'; // По умолчанию
+}
+
+// Основная функция для вызова
+function getPurchaseStatistics() {
+    return parsePurchaseData(document.documentElement.outerHTML);
+}
+
+window.getPurchaseStatistics = getPurchaseStatistics;

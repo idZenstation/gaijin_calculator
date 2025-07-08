@@ -1,86 +1,71 @@
-async function calculateTotal() {
-    let total = 0;
-    let count = 0;
-    const currencySymbols = {
-        '₽': 'RUB',
-        '$': 'USD',
-        '€': 'EUR',
-        '£': 'GBP'
-    };
+document.addEventListener('DOMContentLoaded', () => {
+  const calculateBtn = document.getElementById('calculate');
+  const resultDiv = document.getElementById('result');
+  let isProcessing = false;
 
-    // Ждём загрузки таблицы (может быть динамической)
-    const table = await waitForElement('#purchases-history');
-    if (!table) return;
+  calculateBtn.addEventListener('click', async () => {
+    if (isProcessing) return;
+    isProcessing = true;
+    calculateBtn.disabled = true;
+    resultDiv.innerHTML = '<p class="loading">Загрузка данных...</p>';
 
-    const rows = table.querySelectorAll('tbody tr');
-    if (rows.length === 0) return;
+    try {
+      // Шаг 1: Получаем HTML через background.js
+      const { html, error: fetchError } = await chrome.runtime.sendMessage({
+        action: 'fetchPurchases'
+      });
 
-    for (const row of rows) {
-        const priceCell = row.querySelector('td:nth-child(4)');
-        if (!priceCell) continue;
+      if (fetchError) throw new Error(fetchError);
 
-        const priceText = priceCell.textContent.trim();
-        if (!priceText) continue;
+      // Шаг 2: Получаем активную вкладку
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true
+      });
 
-        // Извлекаем валюту и значение
-        const match = priceText.match(/([₽$€£])\s*([\d,.]+)/);
-        if (!match) continue;
+      if (!tab) throw new Error('Не найдена активная вкладка');
 
-        const currencySymbol = match[1];
-        const amount = parseFloat(match[2].replace(',', ''));
-        const currency = currencySymbols[currencySymbol] || 'UNKNOWN';
+      // Шаг 3: Отправляем HTML в content.js для парсинга
+      const injectionResults = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['content.js']
+      });
 
-        total += amount;
-        count++;
-    }
-
-    // Создаём элемент для отображения статистики
-    let statsDiv = document.getElementById('gaijin-purchase-stats');
-    if (!statsDiv) {
-        statsDiv = document.createElement('div');
-        statsDiv.id = 'gaijin-purchase-stats';
-        statsDiv.style.padding = '10px';
-        statsDiv.style.margin = '10px 0';
-        statsDiv.style.backgroundColor = '#f5f5f5';
-        statsDiv.style.borderRadius = '4px';
-        table.parentNode.insertBefore(statsDiv, table);
-    }
-
-    statsDiv.innerHTML = `
-        <h3>Статистика покупок</h3>
-        <p>Всего покупок: ${count}</p>
-        <p>Общая сумма: ${total.toFixed(2)}</p>
-    `;
-}
-
-function waitForElement(selector, timeout = 5000) {
-    return new Promise((resolve) => {
-        if (document.querySelector(selector)) {
-            return resolve(document.querySelector(selector));
+      const { success, data, error: parseError } = await chrome.tabs.sendMessage(
+        tab.id,
+        {
+          action: 'parseHTML',
+          html
         }
+      );
 
-        const observer = new MutationObserver(() => {
-            if (document.querySelector(selector)) {
-                observer.disconnect();
-                resolve(document.querySelector(selector));
-            }
-        });
+      if (!success) throw new Error(parseError);
 
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-
-        setTimeout(() => {
-            observer.disconnect();
-            resolve(null);
-        }, timeout);
-    });
-}
-
-// Запускаем расчет при загрузке и при изменениях (для динамического контента)
-document.addEventListener('DOMContentLoaded', calculateTotal);
-new MutationObserver(calculateTotal).observe(document.body, {
-    childList: true,
-    subtree: true
+      // Шаг 4: Отображаем результаты
+      resultDiv.innerHTML = `
+        <h3>Статистика покупок</h3>
+        <p><strong>Всего покупок:</strong> ${data.count}</p>
+        <p><strong>Общая сумма:</strong> ${data.total.toFixed(2)}</p>
+        ${data.currencies.map(c => `
+          <div class="currency-item">${c}</div>
+        `).join('')}
+        <p><small>Последнее обновление: ${new Date().toLocaleTimeString()}</small></p>
+      `;
+    } catch (error) {
+      console.error('Ошибка:', error);
+      resultDiv.innerHTML = `
+        <p class="error">Ошибка: ${error.message}</p>
+        <p>Попробуйте:</p>
+        <ol>
+          <li>Открыть <a href="https://store.gaijin.net/user.php?view=purchases" target="_blank">страницу покупок</a></li>
+          <li>Войти в аккаунт</li>
+          <li>Обновить страницу (F5)</li>
+          <li>Попробовать снова</li>
+        </ol>
+      `;
+    } finally {
+      isProcessing = false;
+      calculateBtn.disabled = false;
+    }
+  });
 });

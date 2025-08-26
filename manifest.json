@@ -14,7 +14,8 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://store.gaijin.net/user.php?view=purchases*"],
+      //"matches": ["*://store.gaijin.net/user.php?view=purchases*"],
+      "matches": ["*/user.php?view=purchases*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     }

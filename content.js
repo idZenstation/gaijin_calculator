@@ -151,5 +151,5 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         }
     }
 
-    return true; // Сообщаем, что ответ будет асинхронным
+    return true; // Ответ будет асинхронным
 });

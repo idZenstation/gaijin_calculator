@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const resultsDiv = document.getElementById('results');
 
     function getPurchaseData() {
-        resultsDiv.innerHTML = '<div class="result">Запрос данных...</div>';
+        resultsDiv.innerHTML = '<div class="result">Запрос данных 🔄</div>';
 
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
             if (!tabs[0] || !tabs[0].url.includes('store.gaijin.net/user.php?view=purchases')) {

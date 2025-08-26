@@ -1,73 +1,58 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Gaijin Calculator</title>
+    <meta charset="utf-8">
     <style>
         body {
-          width: 350px;
-          padding: 15px;
-          font-family: Arial, sans-serif;
-          background-color: #f8f9fa;
+            width: 300px;
+            padding: 15px;
+            font-family: Arial, sans-serif;
         }
-        h3 {
-          color: #1a73e8;
-          margin-top: 0;
-          text-align: center;
+        .header {
+            text-align: center;
+            color: #ff8c00;
+            margin-bottom: 15px;
+            font-weight: bold;
+            font-size: 16px;
         }
-        button {
-          width: 100%;
-          padding: 12px;
-          background: #1a73e8;
-          color: white;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          font-weight: bold;
-          margin: 10px 0;
-          transition: background 0.3s;
+        .result {
+            margin: 8px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 3px solid #ff8c00;
         }
-        button:hover {
-          background: #0d62c9;
+        .refresh-btn {
+            width: 100%;
+            padding: 10px;
+            background: #ff8c00;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-weight: bold;
         }
-        #result {
-          margin-top: 15px;
-          background: white;
-          padding: 15px;
-          border-radius: 4px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        .refresh-btn:hover {
+            background: #e67e00;
         }
-        .purchase {
-          margin: 10px 0;
-          padding: 10px;
-          border-bottom: 1px solid #eee;
+        .refresh-btn:active {
+            transform: translateY(1px);
         }
         .error {
-          color: #d32f2f;
-          padding: 10px;
-          background: #ffebee;
-          border-radius: 4px;
-          margin-top: 10px;
-        }
-        .total {
-          font-weight: bold;
-          margin: 15px 0;
-          font-size: 16px;
-          color: #1a73e8;
-        }
-        .loading {
-          text-align: center;
-          padding: 15px;
-          color: #666;
+            color: #dc3545;
+            background: #f8d7da;
+            border-color: #dc3545;
         }
     </style>
 </head>
 <body>
-<h3>Gaijin Purchase Calculator</h3>
-<button id="calculate">Calculate Purchases</button>
-<div id="result">
-    <p>Open your purchase history popup and click the button</p>
+<div class="header">🎯 Gaijin Purchase Summary</div>
+<div id="results">
+    <div class="result">Загрузка данных...</div>
 </div>
+<button class="refresh-btn" id="refresh">🔄 Обновить данные</button>
+
 <script src="popup.js"></script>
 </body>
 </html>

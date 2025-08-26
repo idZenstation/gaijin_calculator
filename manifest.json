@@ -1,23 +1,27 @@
 {
   "manifest_version": 3,
-  "name": "Gaijin Purchase Calculator",
-  "version": "1.1",
-  "description": "Calculates total purchases from Gaijin Store",
-  "icons": {
-    "16": "icons/icon16.png",
-    "32": "icons/icon32.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
-  },
+  "name": "Gaijin Purchase Summary",
+  "version": "1.0",
+  "description": "Подсчитывает общую сумму покупок на странице истории заказов Gaijin Store",
+  "permissions": ["activeTab", "scripting"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
-      "32": "icons/icon32.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
   },
-  "permissions": ["activeTab", "scripting"],
-  "host_permissions": ["https://store.gaijin.net/*"]
+  "content_scripts": [
+    {
+      "matches": ["*://store.gaijin.net/user.php?view=purchases*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
 }

@@ -5,8 +5,47 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalItems = document.getElementById('totalItems');
     const freeItems = document.getElementById('freeItems');
     const paidItems = document.getElementById('paidItems');
+    const headerText = document.getElementById('headerText');
+
+    const statsState = document.getElementById('statsState');
+    const welcomeState = document.getElementById('welcomeState');
 
     let isPopupVisible = true;
+    let currentStoreType = null;
+
+    // Функция для проверки поддерживаемой страницы
+    function isSupportedPage(url) {
+        if (url.includes('store.gaijin.net/user.php?view=purchases')) {
+            return 'gaijin';
+        } else if (url.includes('store.pixstorm.ru/user.php?view=purchases')) {
+            return 'pixstorm';
+        }
+        return null;
+    }
+
+    // Функция для переключения состояний интерфейса
+    function setUIState(storeType) {
+        currentStoreType = storeType;
+
+        if (storeType) {
+            // На поддерживаемой странице - показываем статистику
+            statsState.classList.remove('hidden');
+            welcomeState.classList.add('hidden');
+            togglePopupBtn.classList.remove('hidden');
+
+            // Обновляем заголовок в зависимости от магазина
+            const storeName = storeType === 'pixstorm' ? 'PixStorm Store' : 'Gaijin Store';
+            headerText.textContent = `Статистика (${storeName})`;
+        } else {
+            // Не на поддерживаемой странице - показываем приветствие
+            statsState.classList.add('hidden');
+            welcomeState.classList.remove('hidden');
+            togglePopupBtn.classList.add('hidden');
+
+            // Восстанавливаем стандартный заголовок
+            headerText.textContent = 'Статистика покупок';
+        }
+    }
 
     function updateUI(results) {
         totalAmount.textContent = results.total.toLocaleString('ru-RU') + ' ₽';
@@ -37,17 +76,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Функция для проверки поддерживаемой страницы
-    function isSupportedPage(url) {
-        return url.includes('store.gaijin.net/user.php?view=purchases') ||
-               url.includes('store.pixstorm.ru/user.php?view=purchases');
-    }
-
     function getPurchaseData() {
         setLoadingState(true);
 
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            if (!tabs[0] || !isSupportedPage(tabs[0].url)) {
+            if (!tabs[0]) {
+                setLoadingState(false);
+                setUIState(null);
+                return;
+            }
+
+            const storeType = isSupportedPage(tabs[0].url);
+            setUIState(storeType);
+
+            if (!storeType) {
                 setLoadingState(false);
                 return;
             }
@@ -74,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Функция для переключения видимости попапа на странице
     function togglePopupOnPage() {
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            if (!tabs[0] || !isSupportedPage(tabs[0].url)) {
+            if (!tabs[0] || !currentStoreType) {
                 return;
             }
 
@@ -94,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Функция для проверки текущего состояния попапа
     function checkPopupState() {
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            if (!tabs[0] || !isSupportedPage(tabs[0].url)) {
+            if (!tabs[0] || !currentStoreType) {
                 return;
             }
 
@@ -114,7 +156,11 @@ document.addEventListener('DOMContentLoaded', function() {
     refreshBtn.addEventListener('click', getPurchaseData);
     togglePopupBtn.addEventListener('click', togglePopupOnPage);
 
-    // Автоматически запрашиваем данные при открытии popup
+    // Автоматически проверяем состояние при открытии popup
     getPurchaseData();
-    checkPopupState();
+
+    // Если на поддерживаемой странице - проверяем состояние попапа
+    if (currentStoreType) {
+        checkPopupState();
+    }
 });

@@ -14,27 +14,27 @@
         }
         .container {
             padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
         .header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
             color: #e1ce9b;
-            margin-bottom: 20px;
             font-weight: bold;
             font-size: 16px;
             padding: 12px;
             background: #27323f;
             border-radius: 8px;
-            position: relative;
         }
         .header-title {
-                display: flex;
-                flex-direction: row;
-                align-items: center;
-                justify-content: center;
-                width: 100%;
-                height: 30px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            justify-content: center;
         }
         .toggle-popup-btn {
             background: #19bcb7;
@@ -46,7 +46,7 @@
             padding: 6px 10px;
             font-weight: bold;
             transition: all 0.2s ease;
-            margin-left: auto;
+            flex-shrink: 0;
         }
         .toggle-popup-btn:hover {
             background: #17a8a3;
@@ -65,12 +65,17 @@
             background: #27323f;
             border-radius: 8px;
             padding: 16px;
-            margin-bottom: 16px;
             border: 1px solid #344150;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
         .stat-total {
-            text-align: center;
-            margin-bottom: 16px;
+            display: flex;
+            /* flex-direction: column; */
+            align-items: center;
+            justify-content: space-evenly;
+            gap: 8px;
             padding-bottom: 12px;
             border-bottom: 1px solid #344150;
         }
@@ -78,7 +83,6 @@
             font-size: 24px;
             font-weight: bold;
             color: #19bcb7;
-            margin: 8px 0;
         }
         .total-label {
             font-size: 12px;
@@ -89,8 +93,6 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 6px 0;
-            font-size: 13px;
         }
         .stat-label {
             color: #bac2c8;
@@ -108,7 +110,6 @@
             color: #19bcb7;
         }
         .refresh-btn {
-            width: 100%;
             padding: 12px;
             background: #19bcb7;
             color: #2d3a48;
@@ -118,6 +119,10 @@
             font-weight: bold;
             font-size: 14px;
             transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         .refresh-btn:hover {
             background: #17a8a3;
@@ -127,25 +132,28 @@
             transform: translateY(0);
         }
         .welcome-section {
-            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
             padding: 20px 0;
         }
         .welcome-title {
             color: #e1ce9b;
             font-size: 18px;
-            margin-bottom: 16px;
+            text-align: center;
         }
         .welcome-text {
             color: #bac2c8;
             font-size: 14px;
-            margin-bottom: 20px;
+            text-align: center;
             line-height: 1.4;
         }
         .store-buttons {
             display: flex;
             flex-direction: column;
             gap: 10px;
-            margin-bottom: 16px;
+            width: 100%;
         }
         .store-btn {
             padding: 12px;
@@ -159,6 +167,10 @@
             transition: all 0.2s ease;
             text-decoration: none;
             text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         .store-btn:hover {
             background: #344150;
@@ -169,7 +181,6 @@
             text-align: center;
             font-size: 11px;
             color: #8a949e;
-            margin-top: 12px;
             padding-top: 12px;
             border-top: 1px solid #344150;
         }
@@ -181,13 +192,14 @@
 <body>
 <div class="container">
     <div class="header">
-        <div class="header-title">
+
+        <div>
             <span>🎯</span>
             <span id="headerText">Статистика покупок</span>
         </div>
-        <button class="toggle-popup-btn hidden" id="togglePopupBtn" title="Показать/скрыть попап на странице">
-            📊
-        </button>
+            <button class="toggle-popup-btn hidden" id="togglePopupBtn" title="Показать/скрыть попап на странице">
+                📊
+            </button>
     </div>
 
     <!-- Состояние: на поддерживаемой странице -->
@@ -210,9 +222,13 @@
                 <span class="stat-label">Платные:</span>
                 <span class="stat-value paid" id="paidItems">0</span>
             </div>
+            <button class="stat-row refresh-btn" id="refresh">
+                <span>🔄</span>
+                <span>Обновить статистику</span>
+            </button>
         </div>
 
-        <button class="refresh-btn" id="refresh">🔄 Обновить статистику</button>
+
     </div>
 
     <!-- Состояние: не на поддерживаемой странице -->
@@ -225,10 +241,12 @@
 
             <div class="store-buttons">
                 <a href="https://store.gaijin.net/user.php?view=purchases" target="_blank" class="store-btn">
-                    🎮 Gaijin Store
+                    <span>🎮</span>
+                    <span>Gaijin Store</span>
                 </a>
                 <a href="https://store.pixstorm.ru/user.php?view=purchases" target="_blank" class="store-btn">
-                    🌟 PixStorm Store
+                    <span>🌟</span>
+                    <span>PixStorm Store</span>
                 </a>
             </div>
 

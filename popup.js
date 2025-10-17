@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const freeItems = document.getElementById('freeItems');
     const paidItems = document.getElementById('paidItems');
 
-    let isPopupVisible = true; // Предполагаем, что попап видим при загрузке
+    let isPopupVisible = true;
 
     function updateUI(results) {
         totalAmount.textContent = results.total.toLocaleString('ru-RU') + ' ₽';
@@ -37,11 +37,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Функция для проверки поддерживаемой страницы
+    function isSupportedPage(url) {
+        return url.includes('store.gaijin.net/user.php?view=purchases') ||
+               url.includes('store.pixstorm.ru/user.php?view=purchases');
+    }
+
     function getPurchaseData() {
         setLoadingState(true);
 
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            if (!tabs[0] || !tabs[0].url.includes('store.gaijin.net/user.php?view=purchases')) {
+            if (!tabs[0] || !isSupportedPage(tabs[0].url)) {
                 setLoadingState(false);
                 return;
             }
@@ -68,7 +74,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Функция для переключения видимости попапа на странице
     function togglePopupOnPage() {
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            if (!tabs[0] || !tabs[0].url.includes('store.gaijin.net/user.php?view=purchases')) {
+            if (!tabs[0] || !isSupportedPage(tabs[0].url)) {
                 return;
             }
 
@@ -88,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Функция для проверки текущего состояния попапа
     function checkPopupState() {
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            if (!tabs[0] || !tabs[0].url.includes('store.gaijin.net/user.php?view=purchases')) {
+            if (!tabs[0] || !isSupportedPage(tabs[0].url)) {
                 return;
             }
 
@@ -110,5 +116,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Автоматически запрашиваем данные при открытии popup
     getPurchaseData();
-    checkPopupState(); // Проверяем состояние попапа при открытии
+    checkPopupState();
 });

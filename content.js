@@ -1,10 +1,42 @@
 // Глобальная переменная для отслеживания состояния
 let isPopupManuallyClosed = false;
 
+// Функция для определения типа магазина
+function getStoreType() {
+    const url = window.location.hostname;
+    if (url.includes('pixstorm.ru')) {
+        return 'pixstorm';
+    } else if (url.includes('gaijin.net')) {
+        return 'gaijin';
+    }
+    return 'unknown';
+}
+
+// Функция для получения селекторов в зависимости от магазина
+function getSelectors() {
+    const storeType = getStoreType();
+
+    if (storeType === 'pixstorm') {
+        return {
+            item: '.showcase-item', // Предполагаем, что селекторы одинаковые
+            price: '.showcase-item-price',
+            quantity: '.showcase-item-description__title-comment'
+        };
+    } else {
+        // Gaijin store
+        return {
+            item: '.showcase-item',
+            price: '.showcase-item-price',
+            quantity: '.showcase-item-description__title-comment'
+        };
+    }
+}
+
 // Функция для расчета суммы покупок
 function calculateTotalPurchases() {
-    console.log('Calculating purchases...');
-    const purchaseItems = document.querySelectorAll('.showcase-item');
+    console.log('Calculating purchases for store:', getStoreType());
+    const selectors = getSelectors();
+    const purchaseItems = document.querySelectorAll(selectors.item);
     let total = 0;
     let totalItems = 0;
     let freeItems = 0;
@@ -12,7 +44,7 @@ function calculateTotalPurchases() {
     let processedElements = 0;
 
     purchaseItems.forEach(item => {
-        const quantityElement = item.querySelector('.showcase-item-description__title-comment');
+        const quantityElement = item.querySelector(selectors.quantity);
         let quantity = 1;
         if (quantityElement) {
             const quantityText = quantityElement.textContent.trim();
@@ -22,39 +54,57 @@ function calculateTotalPurchases() {
             }
         }
 
-        const priceElement = item.querySelector('.showcase-item-price');
+        const priceElement = item.querySelector(selectors.price);
         if (priceElement && priceElement.textContent.trim()) {
             const priceText = priceElement.textContent.trim();
-            const priceMatch = priceText.match(/([\d,.]+)/);
+
+            // Универсальный парсинг цены для разных форматов
+            const priceMatch = priceText.match(/([\d\s,.]+)/);
 
             if (priceMatch) {
-                let price = parseFloat(priceMatch[1].replace(',', '.'));
-                total += price * quantity;
+                // Очищаем цену от пробелов и заменяем запятые на точки
+                let priceStr = priceMatch[1].replace(/\s/g, '').replace(',', '.');
+                let price = parseFloat(priceStr);
 
-                if (price > 0) {
-                    paidItems += quantity;
+                // Проверяем, является ли цена числом
+                if (!isNaN(price)) {
+                    total += price * quantity;
+
+                    if (price > 0) {
+                        paidItems += quantity;
+                        console.log(`Found paid item: ${price} ₽ x ${quantity}`);
+                    } else {
+                        freeItems += quantity;
+                        console.log(`Found free item: ${price} ₽ x ${quantity}`);
+                    }
+
+                    totalItems += quantity;
+                    processedElements++;
                 } else {
+                    // Если цена не распознана - считаем бесплатным
                     freeItems += quantity;
+                    totalItems += quantity;
                 }
-
-                totalItems += quantity;
-                processedElements++;
             } else {
                 freeItems += quantity;
                 totalItems += quantity;
             }
         } else {
+            // Если нет цены - считаем бесплатным
             freeItems += quantity;
             totalItems += quantity;
         }
     });
+
+    console.log(`Calculation complete: ${total} ₽, Total: ${totalItems}, Paid: ${paidItems}, Free: ${freeItems} for ${getStoreType()}`);
 
     return {
         total: Math.round(total * 100) / 100,
         totalItems,
         freeItems,
         paidItems,
-        processedElements
+        processedElements,
+        storeType: getStoreType()
     };
 }
 
@@ -89,9 +139,15 @@ function displayResults(results) {
         color: #bac2c8;
     `;
 
+    const storeName = results.storeType === 'pixstorm' ? 'PixStorm Store' : 'Gaijin Store';
+
     resultsContainer.innerHTML = `
         <div style="font-weight: bold; color: #e1ce9b; margin-bottom: 16px; font-size: 18px; text-align: center;">
             🎯 Сумма покупок
+        </div>
+
+        <div style="font-size: 12px; color: #8a949e; text-align: center; margin-bottom: 10px;">
+            ${storeName}
         </div>
 
         <div style="margin-bottom: 12px; padding: 10px; background: #27323f; border-radius: 6px;">
@@ -208,11 +264,15 @@ function getPopupState() {
 
 // Функция для обновления результатов в попапе
 function updatePopupResults(container, results) {
-    const totalElement = container.querySelector('div:nth-child(2) div:nth-child(2)');
-    const totalItemsElement = container.querySelector('div:nth-child(3) span:nth-child(2)');
-    const freeItemsElement = container.querySelector('div:nth-child(4) span:nth-child(2)');
-    const paidItemsElement = container.querySelector('div:nth-child(5) span:nth-child(2)');
+    const storeNameElement = container.querySelector('div:nth-child(2)');
+    const totalElement = container.querySelector('div:nth-child(3) div:nth-child(2)');
+    const totalItemsElement = container.querySelector('div:nth-child(4) span:nth-child(2)');
+    const freeItemsElement = container.querySelector('div:nth-child(5) span:nth-child(2)');
+    const paidItemsElement = container.querySelector('div:nth-child(6) span:nth-child(2)');
 
+    const storeName = results.storeType === 'pixstorm' ? 'PixStorm Store' : 'Gaijin Store';
+
+    if (storeNameElement) storeNameElement.textContent = storeName;
     if (totalElement) totalElement.textContent = `${results.total.toLocaleString('ru-RU')} ₽`;
     if (totalItemsElement) totalItemsElement.textContent = results.totalItems;
     if (freeItemsElement) freeItemsElement.textContent = results.freeItems;
@@ -221,7 +281,7 @@ function updatePopupResults(container, results) {
 
 // Основная функция инициализации
 function initExtension() {
-    console.log('Gaijin Purchase Summary extension loaded');
+    console.log('Purchase Summary extension loaded for:', getStoreType());
 
     // Сбрасываем флаг при каждой загрузке/обновлении страницы
     isPopupManuallyClosed = false;

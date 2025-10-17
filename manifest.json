@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Gaijin Purchase Summary",
   "version": "1.0",
-  "description": "Подсчитывает общую сумму покупок на странице истории заказов Gaijin Store",
+  "description": "Подсчитывает общую сумму покупок на странице истории заказов Gaijin Store и PixStorm Store",
   "permissions": ["activeTab", "scripting"],
   "action": {
     "default_popup": "popup.html",
@@ -14,7 +14,10 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://store.gaijin.net/user.php?view=purchases*"],
+      "matches": [
+        "*://store.gaijin.net/user.php?view=purchases*",
+        "*://store.pixstorm.ru/user.php?view=purchases*"
+      ],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
@@ -26,6 +29,9 @@
   },
   "web_accessible_resources": [{
     "resources": ["content.js"],
-    "matches": ["*://store.gaijin.net/*"]
+    "matches": [
+      "*://store.gaijin.net/*",
+      "*://store.pixstorm.ru/*"
+    ]
   }]
 }

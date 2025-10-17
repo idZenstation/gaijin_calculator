@@ -1,3 +1,51 @@
+// Локализация
+const translations = {
+    ru: {
+        // Заголовки
+        purchaseStats: "Статистика покупок",
+        purchaseStatsGaijin: "Gaijin Store",
+        purchaseStatsPixstorm: "PixStorm Store",
+
+        // Статистика
+        totalAmount: "Общая сумма",
+        totalItems: "Всего товаров:",
+        freeItems: "Бесплатные:",
+        paidItems: "Платные:",
+        refreshButton: "Обновить статистику",
+
+        // Приветствие
+        welcomeTitle: "Добро пожаловать!",
+        welcomeText: "Откройте страницу истории покупок в одном из поддерживаемых магазинов:",
+        welcomeHint: "После перехода на страницу покупок откройте это расширение снова",
+
+        // Подсказки
+        showPopup: "Показать попап на странице",
+        hidePopup: "Скрыть попап на странице"
+    },
+    en: {
+        // Headers
+        purchaseStats: "Purchase Statistics",
+        purchaseStatsGaijin: "Gaijin Store",
+        purchaseStatsPixstorm: "PixStorm Store",
+
+        // Statistics
+        totalAmount: "Total Amount",
+        totalItems: "Total Items:",
+        freeItems: "Free:",
+        paidItems: "Paid:",
+        refreshButton: "Refresh Statistics",
+
+        // Welcome
+        welcomeTitle: "Welcome!",
+        welcomeText: "Open the purchase history page in one of the supported stores:",
+        welcomeHint: "After navigating to the purchase page, open this extension again",
+
+        // Tooltips
+        showPopup: "Show popup on page",
+        hidePopup: "Hide popup on page"
+    }
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     const refreshBtn = document.getElementById('refresh');
     const togglePopupBtn = document.getElementById('togglePopupBtn');
@@ -9,9 +57,73 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const statsState = document.getElementById('statsState');
     const welcomeState = document.getElementById('welcomeState');
+    const langButtons = document.querySelectorAll('.lang-btn');
 
     let isPopupVisible = true;
     let currentStoreType = null;
+    let currentLanguage = 'ru';
+
+    // Функция для установки языка
+    function setLanguage(lang) {
+        currentLanguage = lang;
+
+        // Обновляем активную кнопку языка
+        langButtons.forEach(btn => {
+            if (btn.dataset.lang === lang) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // Обновляем все тексты
+        updateAllTexts();
+
+        // Сохраняем выбор языка
+        chrome.storage.local.set({ language: lang });
+    }
+
+    // Функция для обновления всех текстов
+    function updateAllTexts() {
+        const texts = translations[currentLanguage];
+
+        // Обновляем элементы с data-i18n
+        document.querySelectorAll('[data-i18n]').forEach(element => {
+            const key = element.getAttribute('data-i18n');
+            if (texts[key]) {
+                element.textContent = texts[key];
+            }
+        });
+
+        // Обновляем заголовок в зависимости от магазина
+        updateHeaderText();
+
+        // Обновляем подсказки кнопок
+        updateButtonTooltips();
+    }
+
+    // Функция для обновления заголовка
+    function updateHeaderText() {
+        const texts = translations[currentLanguage];
+
+        if (currentStoreType === 'gaijin') {
+            headerText.textContent = texts.purchaseStatsGaijin;
+        } else if (currentStoreType === 'pixstorm') {
+            headerText.textContent = texts.purchaseStatsPixstorm;
+        } else {
+            headerText.textContent = texts.purchaseStats;
+        }
+    }
+
+    // Функция для обновления подсказок кнопок
+    function updateButtonTooltips() {
+        const texts = translations[currentLanguage];
+        if (isPopupVisible) {
+            togglePopupBtn.title = texts.hidePopup;
+        } else {
+            togglePopupBtn.title = texts.showPopup;
+        }
+    }
 
     // Функция для проверки поддерживаемой страницы
     function isSupportedPage(url) {
@@ -28,50 +140,45 @@ document.addEventListener('DOMContentLoaded', function() {
         currentStoreType = storeType;
 
         if (storeType) {
-            // На поддерживаемой странице - показываем статистику
             statsState.classList.remove('hidden');
             welcomeState.classList.add('hidden');
             togglePopupBtn.classList.remove('hidden');
-
-            // Обновляем заголовок в зависимости от магазина
-            const storeName = storeType === 'pixstorm' ? 'PixStorm Store' : 'Gaijin Store';
-            headerText.textContent = `Статистика (${storeName})`;
+            updateHeaderText();
         } else {
-            // Не на поддерживаемой странице - показываем приветствие
             statsState.classList.add('hidden');
             welcomeState.classList.remove('hidden');
             togglePopupBtn.classList.add('hidden');
-
-            // Восстанавливаем стандартный заголовок
-            headerText.textContent = 'Статистика покупок';
+            updateHeaderText();
         }
     }
 
     function updateUI(results) {
-        totalAmount.textContent = results.total.toLocaleString('ru-RU') + ' ₽';
+        totalAmount.textContent = results.total.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') + (currentLanguage === 'ru' ? ' ₽' : ' RUB');
         totalItems.textContent = results.totalItems;
         freeItems.textContent = results.freeItems;
         paidItems.textContent = results.paidItems;
     }
 
     function updateToggleButton() {
+        const texts = translations[currentLanguage];
         if (isPopupVisible) {
             togglePopupBtn.textContent = '📊';
             togglePopupBtn.classList.remove('off');
-            togglePopupBtn.title = 'Скрыть попап на странице';
+            togglePopupBtn.title = texts.hidePopup;
         } else {
             togglePopupBtn.textContent = '📊';
             togglePopupBtn.classList.add('off');
-            togglePopupBtn.title = 'Показать попап на странице';
+            togglePopupBtn.title = texts.showPopup;
         }
     }
 
     function setLoadingState(isLoading) {
+        const texts = translations[currentLanguage];
         if (isLoading) {
-            refreshBtn.innerHTML = '⏳ Загрузка...';
+            refreshBtn.innerHTML = '<span>⏳</span><span>' + texts.refreshButton + '</span>';
             refreshBtn.disabled = true;
         } else {
-            refreshBtn.innerHTML = '🔄 Обновить статистику';
+            refreshBtn.innerHTML = '<span>🔄</span><span>' + texts.refreshButton + '</span>';
             refreshBtn.disabled = false;
         }
     }
@@ -153,14 +260,31 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Обработчики событий
     refreshBtn.addEventListener('click', getPurchaseData);
     togglePopupBtn.addEventListener('click', togglePopupOnPage);
 
-    // Автоматически проверяем состояние при открытии popup
-    getPurchaseData();
+    // Обработчики переключения языка
+    langButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            setLanguage(btn.dataset.lang);
+        });
+    });
 
-    // Если на поддерживаемой странице - проверяем состояние попапа
-    if (currentStoreType) {
-        checkPopupState();
-    }
+    // Загружаем сохраненный язык
+    chrome.storage.local.get(['language'], function(result) {
+        if (result.language) {
+            setLanguage(result.language);
+        } else {
+            setLanguage('ru');
+        }
+
+        // Загружаем данные
+        getPurchaseData();
+
+        // Если на поддерживаемой странице - проверяем состояние попапа
+        if (currentStoreType) {
+            checkPopupState();
+        }
+    });
 });

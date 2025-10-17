@@ -170,6 +170,42 @@ function displayResults(results) {
     document.body.appendChild(resultsContainer);
 }
 
+// Функция для показа попапа
+function showPopup() {
+    isPopupManuallyClosed = false;
+    const results = calculateTotalPurchases();
+    if (results.processedElements > 0 || results.totalItems > 0) {
+        displayResults(results);
+    }
+}
+
+// Функция для скрытия попапа
+function hidePopup() {
+    isPopupManuallyClosed = true;
+    const oldResults = document.getElementById('gaijin-purchase-summary');
+    if (oldResults) {
+        oldResults.remove();
+    }
+}
+
+// Функция для переключения видимости попапа
+function togglePopup(show) {
+    if (show) {
+        showPopup();
+    } else {
+        hidePopup();
+    }
+}
+
+// Функция для получения текущего состояния попапа
+function getPopupState() {
+    const popupExists = !!document.getElementById('gaijin-purchase-summary');
+    return {
+        isVisible: popupExists && !isPopupManuallyClosed,
+        exists: popupExists
+    };
+}
+
 // Функция для обновления результатов в попапе
 function updatePopupResults(container, results) {
     const totalElement = container.querySelector('div:nth-child(2) div:nth-child(2)');
@@ -217,6 +253,21 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         sendResponse({
             success: true,
             results: results
+        });
+    }
+
+    if (request.action === "togglePopup") {
+        togglePopup(request.isVisible);
+        sendResponse({
+            success: true
+        });
+    }
+
+    if (request.action === "getPopupState") {
+        const state = getPopupState();
+        sendResponse({
+            success: true,
+            isVisible: state.isVisible
         });
     }
 

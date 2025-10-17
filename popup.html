@@ -5,48 +5,130 @@
     <style>
         body {
             width: 320px;
-            padding: 15px;
+            padding: 0;
+            margin: 0;
             font-family: Arial, sans-serif;
+            background: #2d3a48;
+            color: #bac2c8;
+        }
+        .container {
+            padding: 16px;
         }
         .header {
             text-align: center;
-            color: #ff8c00;
-            margin-bottom: 15px;
+            color: #e1ce9b;
+            margin-bottom: 20px;
             font-weight: bold;
             font-size: 16px;
-        }
-        .result {
-            margin: 8px 0;
             padding: 12px;
-            border-radius: 6px;
-            border-left: 3px solid;
+            background: #27323f;
+            border-radius: 8px;
+        }
+        .stats-section {
+            background: #27323f;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid #344150;
+        }
+        .stat-total {
+            text-align: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #344150;
+        }
+        .total-amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #19bcb7;
+            margin: 8px 0;
+        }
+        .total-label {
+            font-size: 12px;
+            color: #8a949e;
+            text-transform: uppercase;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
             font-size: 13px;
+        }
+        .stat-label {
+            color: #bac2c8;
+        }
+        .stat-value {
+            font-weight: bold;
+        }
+        .stat-value.total {
+            color: #bac2c8;
+        }
+        .stat-value.free {
+            color: #bac2c8;
+        }
+        .stat-value.paid {
+            color: #19bcb7;
         }
         .refresh-btn {
             width: 100%;
-            padding: 10px;
-            background: #ff8c00;
-            color: white;
+            padding: 12px;
+            background: #19bcb7;
+            color: #2d3a48;
             border: none;
-            border-radius: 5px;
+            border-radius: 6px;
             cursor: pointer;
-            margin-top: 10px;
             font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s ease;
         }
         .refresh-btn:hover {
-            background: #e67e00;
+            background: #17a8a3;
+            transform: translateY(-1px);
         }
         .refresh-btn:active {
-            transform: translateY(1px);
+            transform: translateY(0);
+        }
+        .footer {
+            text-align: center;
+            font-size: 11px;
+            color: #8a949e;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #344150;
         }
     </style>
 </head>
 <body>
-<div class="header">🎯 Статистика покупок</div>
-<div id="results">
-    <div class="result">Загрузка данных...</div>
+<div class="container">
+    <div class="header">🎯 Статистика покупок</div>
+
+    <div class="stats-section">
+        <div class="stat-total">
+            <div class="total-label">Общая сумма</div>
+            <div class="total-amount" id="totalAmount">0 ₽</div>
+        </div>
+
+        <div class="stat-row">
+            <span class="stat-label">Всего товаров:</span>
+            <span class="stat-value total" id="totalItems">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Бесплатные:</span>
+            <span class="stat-value free" id="freeItems">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Платные:</span>
+            <span class="stat-value paid" id="paidItems">0</span>
+        </div>
+    </div>
+
+    <button class="refresh-btn" id="refresh">🔄 Обновить статистику</button>
+
+    <div class="footer">
+        Gaijin Purchase Summary
+    </div>
 </div>
-<button class="refresh-btn" id="refresh">🔄 Обновить статистику</button>
 
 <script src="popup.js"></script>
 </body>

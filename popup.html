@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <style>
         body {
-            width: 300px;
+            width: 320px;
             padding: 15px;
             font-family: Arial, sans-serif;
         }
@@ -17,10 +17,10 @@
         }
         .result {
             margin: 8px 0;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 5px;
-            border-left: 3px solid #ff8c00;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 3px solid;
+            font-size: 13px;
         }
         .refresh-btn {
             width: 100%;
@@ -39,19 +39,14 @@
         .refresh-btn:active {
             transform: translateY(1px);
         }
-        .error {
-            color: #dc3545;
-            background: #f8d7da;
-            border-color: #dc3545;
-        }
     </style>
 </head>
 <body>
-<div class="header">🎯 Gaijin Purchase Summary</div>
+<div class="header">🎯 Статистика покупок</div>
 <div id="results">
-    <div class="result">Загрузка данных 🔄</div>
+    <div class="result">Загрузка данных...</div>
 </div>
-<button class="refresh-btn" id="refresh">🔄 Обновить данные</button>
+<button class="refresh-btn" id="refresh">🔄 Обновить статистику</button>
 
 <script src="popup.js"></script>
 </body>

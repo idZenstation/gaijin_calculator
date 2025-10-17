@@ -14,8 +14,7 @@
   },
   "content_scripts": [
     {
-      //"matches": ["*://store.gaijin.net/user.php?view=purchases*"],
-      "matches": ["*/user.php?view=purchases*"],
+      "matches": ["*://store.gaijin.net/user.php?view=purchases*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
@@ -24,5 +23,9 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "web_accessible_resources": [{
+    "resources": ["content.js"],
+    "matches": ["*://store.gaijin.net/*"]
+  }]
 }

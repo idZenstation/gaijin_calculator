@@ -1,15 +1,17 @@
+// Глобальная переменная для отслеживания состояния
+let isPopupManuallyClosed = false;
+
 // Функция для расчета суммы покупок
 function calculateTotalPurchases() {
     console.log('Calculating purchases...');
     const purchaseItems = document.querySelectorAll('.showcase-item');
     let total = 0;
-    let totalItems = 0;          // Всего товаров (с учетом quantity)
-    let freeItems = 0;           // Бесплатные товары
-    let paidItems = 0;           // Платные товары
-    let processedElements = 0;   // Обработанных элементов
+    let totalItems = 0;
+    let freeItems = 0;
+    let paidItems = 0;
+    let processedElements = 0;
 
     purchaseItems.forEach(item => {
-        // Получаем количество товаров в позиции
         const quantityElement = item.querySelector('.showcase-item-description__title-comment');
         let quantity = 1;
         if (quantityElement) {
@@ -20,7 +22,6 @@ function calculateTotalPurchases() {
             }
         }
 
-        // Проверяем цену
         const priceElement = item.querySelector('.showcase-item-price');
         if (priceElement && priceElement.textContent.trim()) {
             const priceText = priceElement.textContent.trim();
@@ -32,27 +33,21 @@ function calculateTotalPurchases() {
 
                 if (price > 0) {
                     paidItems += quantity;
-                    console.log(`Found paid item: ${price} ₽ x ${quantity}`);
                 } else {
                     freeItems += quantity;
-                    console.log(`Found free item: ${price} ₽ x ${quantity}`);
                 }
 
                 totalItems += quantity;
                 processedElements++;
             } else {
-                // Если цена есть, но не распознана - считаем бесплатным
                 freeItems += quantity;
                 totalItems += quantity;
             }
         } else {
-            // Если нет цены - считаем бесплатным
             freeItems += quantity;
             totalItems += quantity;
         }
     });
-
-    console.log(`Calculation complete: ${total} ₽, Total: ${totalItems}, Paid: ${paidItems}, Free: ${freeItems}`);
 
     return {
         total: Math.round(total * 100) / 100,
@@ -65,6 +60,12 @@ function calculateTotalPurchases() {
 
 // Функция для отображения результатов на странице
 function displayResults(results) {
+    // Проверяем, не был ли попап закрыт пользователем
+    if (isPopupManuallyClosed) {
+        console.log('Popup was manually closed, skipping display');
+        return;
+    }
+
     // Удаляем старые результаты
     const oldResults = document.getElementById('gaijin-purchase-summary');
     if (oldResults) {
@@ -108,10 +109,14 @@ function displayResults(results) {
             <span style="float: right; color: #bac2c8; font-weight: bold;">${results.freeItems}</span>
         </div>
 
-        <div style="margin-bottom: 8px;">
+        <div style="margin-bottom: 16px;">
             <span style="color: #bac2c8;">Платные товары:</span>
             <span style="float: right; color: #19bcb7; font-weight: bold;">${results.paidItems}</span>
         </div>
+
+        <button id="refreshPopupBtn" style="width: 100%; padding: 10px; background: #19bcb7; color: #2d3a48; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: all 0.2s ease;">
+            🔄 Обновить статистику
+        </button>
 
         <div style="font-size: 11px; color: #8a949e; margin-top: 12px; text-align: center; border-top: 1px solid #27323f; padding-top: 8px;">
             Учтены все товары на странице
@@ -139,15 +144,51 @@ function displayResults(results) {
     `;
     closeButton.onmouseover = () => closeButton.style.backgroundColor = '#27323f';
     closeButton.onmouseout = () => closeButton.style.backgroundColor = 'transparent';
-    closeButton.onclick = () => resultsContainer.remove();
+    closeButton.onclick = () => {
+        isPopupManuallyClosed = true;
+        resultsContainer.remove();
+    };
+
+    // Кнопка обновления статистики
+    const refreshBtn = resultsContainer.querySelector('#refreshPopupBtn');
+    refreshBtn.onmouseover = () => refreshBtn.style.backgroundColor = '#17a8a3';
+    refreshBtn.onmouseout = () => refreshBtn.style.backgroundColor = '#19bcb7';
+    refreshBtn.onclick = () => {
+        refreshBtn.innerHTML = '⏳ Загрузка...';
+        refreshBtn.disabled = true;
+
+        setTimeout(() => {
+            const newResults = calculateTotalPurchases();
+            updatePopupResults(resultsContainer, newResults);
+
+            refreshBtn.innerHTML = '🔄 Обновить статистику';
+            refreshBtn.disabled = false;
+        }, 500);
+    };
 
     resultsContainer.appendChild(closeButton);
     document.body.appendChild(resultsContainer);
 }
 
+// Функция для обновления результатов в попапе
+function updatePopupResults(container, results) {
+    const totalElement = container.querySelector('div:nth-child(2) div:nth-child(2)');
+    const totalItemsElement = container.querySelector('div:nth-child(3) span:nth-child(2)');
+    const freeItemsElement = container.querySelector('div:nth-child(4) span:nth-child(2)');
+    const paidItemsElement = container.querySelector('div:nth-child(5) span:nth-child(2)');
+
+    if (totalElement) totalElement.textContent = `${results.total.toLocaleString('ru-RU')} ₽`;
+    if (totalItemsElement) totalItemsElement.textContent = results.totalItems;
+    if (freeItemsElement) freeItemsElement.textContent = results.freeItems;
+    if (paidItemsElement) paidItemsElement.textContent = results.paidItems;
+}
+
 // Основная функция инициализации
 function initExtension() {
     console.log('Gaijin Purchase Summary extension loaded');
+
+    // Сбрасываем флаг при каждой загрузке/обновлении страницы
+    isPopupManuallyClosed = false;
 
     // Ждем немного для загрузки контента
     setTimeout(() => {
@@ -177,12 +218,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
             success: true,
             results: results
         });
-
-        // Также обновляем отображение на странице
-        if (results.processedElements > 0 || results.totalItems > 0) {
-            displayResults(results);
-        }
     }
 
-    return true; // Ответ будет асинхронным
+    return true;
 });

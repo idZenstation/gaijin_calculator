@@ -12,25 +12,22 @@ document.addEventListener('DOMContentLoaded', function() {
         paidItems.textContent = results.paidItems;
     }
 
-    function showError(message) {
-        totalAmount.textContent = '0 ₽';
-        totalItems.textContent = '0';
-        freeItems.textContent = '0';
-        paidItems.textContent = '0';
-
-        // Можно добавить уведомление об ошибке
-        console.error(message);
+    function setLoadingState(isLoading) {
+        if (isLoading) {
+            refreshBtn.innerHTML = '⏳ Загрузка...';
+            refreshBtn.disabled = true;
+        } else {
+            refreshBtn.innerHTML = '🔄 Обновить статистику';
+            refreshBtn.disabled = false;
+        }
     }
 
     function getPurchaseData() {
-        refreshBtn.textContent = '🔄 Загрузка...';
-        refreshBtn.disabled = true;
+        setLoadingState(true);
 
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
             if (!tabs[0] || !tabs[0].url.includes('store.gaijin.net/user.php?view=purchases')) {
-                showError('Not on purchases page');
-                refreshBtn.textContent = '🔄 Обновить статистику';
-                refreshBtn.disabled = false;
+                setLoadingState(false);
                 return;
             }
 
@@ -38,19 +35,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 tabs[0].id,
                 {action: "calculatePurchases"},
                 function(response) {
-                    refreshBtn.textContent = '🔄 Обновить статистику';
-                    refreshBtn.disabled = false;
+                    setLoadingState(false);
 
                     if (chrome.runtime.lastError) {
-                        showError(chrome.runtime.lastError.message);
+                        console.error('Error:', chrome.runtime.lastError);
                         return;
                     }
 
                     if (response && response.success && response.results) {
-                        const res = response.results;
-                        updateUI(res);
-                    } else {
-                        showError('No data received');
+                        updateUI(response.results);
                     }
                 }
             );
@@ -59,6 +52,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     refreshBtn.addEventListener('click', getPurchaseData);
 
-    // Автоматически запрашиваем данные при открытии popup
+    // Только получаем данные, не показываем попап на странице
     getPurchaseData();
 });

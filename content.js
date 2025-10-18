@@ -1,5 +1,50 @@
 // Глобальная переменная для отслеживания состояния
 let isPopupManuallyClosed = false;
+let currentLanguage = 'ru';
+
+// Локализация для content.js
+const contentTranslations = {
+    ru: {
+        purchaseStats: "Сумма покупок",
+        totalAmount: "Общая сумма",
+        totalItems: "Всего товаров:",
+        freeItems: "Бесплатные товары:",
+        paidItems: "Платные товары:",
+        refreshButton: "Обновить статистику",
+        allItemsIncluded: "Учтены все товары на странице",
+        loading: "Загрузка...",
+        gaijinStore: "Gaijin Store",
+        pixstormStore: "PixStorm Store"
+    },
+    en: {
+        purchaseStats: "Purchase Summary",
+        totalAmount: "Total Amount",
+        totalItems: "Total Items:",
+        freeItems: "Free Items:",
+        paidItems: "Paid Items:",
+        refreshButton: "Refresh Statistics",
+        allItemsIncluded: "All items on page included",
+        loading: "Loading...",
+        gaijinStore: "Gaijin Store",
+        pixstormStore: "PixStorm Store"
+    }
+};
+
+// Функция для получения перевода
+function getTranslation(key) {
+    return contentTranslations[currentLanguage][key] || key;
+}
+
+// Функция для установки языка
+function setContentLanguage(lang) {
+    currentLanguage = lang;
+    // Если попап открыт - перерисовываем его
+    const existingPopup = document.getElementById('gaijin-purchase-summary');
+    if (existingPopup && !isPopupManuallyClosed) {
+        const results = calculateTotalPurchases();
+        displayResults(results);
+    }
+}
 
 // Функция для определения типа магазина
 function getStoreType() {
@@ -18,7 +63,7 @@ function getSelectors() {
 
     if (storeType === 'pixstorm') {
         return {
-            item: '.showcase-item', // Предполагаем, что селекторы одинаковые
+            item: '.showcase-item',
             price: '.showcase-item-price',
             quantity: '.showcase-item-description__title-comment'
         };
@@ -139,11 +184,12 @@ function displayResults(results) {
         color: #bac2c8;
     `;
 
-    const storeName = results.storeType === 'pixstorm' ? 'PixStorm Store' : 'Gaijin Store';
+    const storeName = results.storeType === 'pixstorm' ? getTranslation('pixstormStore') : getTranslation('gaijinStore');
+    const currencySymbol = currentLanguage === 'ru' ? ' ₽' : ' RUB';
 
     resultsContainer.innerHTML = `
         <div style="font-weight: bold; color: #e1ce9b; margin-bottom: 16px; font-size: 18px; text-align: center;">
-            🎯 Сумма покупок
+            🎯 ${getTranslation('purchaseStats')}
         </div>
 
         <div style="font-size: 12px; color: #8a949e; text-align: center; margin-bottom: 10px;">
@@ -151,31 +197,31 @@ function displayResults(results) {
         </div>
 
         <div style="margin-bottom: 12px; padding: 10px; background: #27323f; border-radius: 6px;">
-            <div style="font-size: 14px; color: #bac2c8; margin-bottom: 4px;">Общая сумма</div>
-            <div style="font-size: 20px; font-weight: bold; color: #19bcb7;">${results.total.toLocaleString('ru-RU')} ₽</div>
+            <div style="font-size: 14px; color: #bac2c8; margin-bottom: 4px;">${getTranslation('totalAmount')}</div>
+            <div style="font-size: 20px; font-weight: bold; color: #19bcb7;">${results.total.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US')}${currencySymbol}</div>
         </div>
 
         <div style="margin-bottom: 8px;">
-            <span style="color: #bac2c8;">Всего товаров:</span>
+            <span style="color: #bac2c8;">${getTranslation('totalItems')}</span>
             <span style="float: right; color: #bac2c8; font-weight: bold;">${results.totalItems}</span>
         </div>
 
         <div style="margin-bottom: 8px;">
-            <span style="color: #bac2c8;">Бесплатные товары:</span>
+            <span style="color: #bac2c8;">${getTranslation('freeItems')}</span>
             <span style="float: right; color: #bac2c8; font-weight: bold;">${results.freeItems}</span>
         </div>
 
         <div style="margin-bottom: 16px;">
-            <span style="color: #bac2c8;">Платные товары:</span>
+            <span style="color: #bac2c8;">${getTranslation('paidItems')}</span>
             <span style="float: right; color: #19bcb7; font-weight: bold;">${results.paidItems}</span>
         </div>
 
         <button id="refreshPopupBtn" style="width: 100%; padding: 10px; background: #19bcb7; color: #2d3a48; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: all 0.2s ease;">
-            🔄 Обновить статистику
+            🔄 ${getTranslation('refreshButton')}
         </button>
 
         <div style="font-size: 11px; color: #8a949e; margin-top: 12px; text-align: center; border-top: 1px solid #27323f; padding-top: 8px;">
-            Учтены все товары на странице
+            ${getTranslation('allItemsIncluded')}
         </div>
     `;
 
@@ -210,14 +256,14 @@ function displayResults(results) {
     refreshBtn.onmouseover = () => refreshBtn.style.backgroundColor = '#17a8a3';
     refreshBtn.onmouseout = () => refreshBtn.style.backgroundColor = '#19bcb7';
     refreshBtn.onclick = () => {
-        refreshBtn.innerHTML = '⏳ Загрузка...';
+        refreshBtn.innerHTML = `⏳ ${getTranslation('loading')}`;
         refreshBtn.disabled = true;
 
         setTimeout(() => {
             const newResults = calculateTotalPurchases();
             updatePopupResults(resultsContainer, newResults);
 
-            refreshBtn.innerHTML = '🔄 Обновить статистику';
+            refreshBtn.innerHTML = `🔄 ${getTranslation('refreshButton')}`;
             refreshBtn.disabled = false;
         }, 500);
     };
@@ -269,14 +315,17 @@ function updatePopupResults(container, results) {
     const totalItemsElement = container.querySelector('div:nth-child(4) span:nth-child(2)');
     const freeItemsElement = container.querySelector('div:nth-child(5) span:nth-child(2)');
     const paidItemsElement = container.querySelector('div:nth-child(6) span:nth-child(2)');
+    const refreshBtn = container.querySelector('#refreshPopupBtn');
 
-    const storeName = results.storeType === 'pixstorm' ? 'PixStorm Store' : 'Gaijin Store';
+    const storeName = results.storeType === 'pixstorm' ? getTranslation('pixstormStore') : getTranslation('gaijinStore');
+    const currencySymbol = currentLanguage === 'ru' ? ' ₽' : ' RUB';
 
     if (storeNameElement) storeNameElement.textContent = storeName;
-    if (totalElement) totalElement.textContent = `${results.total.toLocaleString('ru-RU')} ₽`;
+    if (totalElement) totalElement.textContent = `${results.total.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US')}${currencySymbol}`;
     if (totalItemsElement) totalItemsElement.textContent = results.totalItems;
     if (freeItemsElement) freeItemsElement.textContent = results.freeItems;
     if (paidItemsElement) paidItemsElement.textContent = results.paidItems;
+    if (refreshBtn) refreshBtn.innerHTML = `🔄 ${getTranslation('refreshButton')}`;
 }
 
 // Основная функция инициализации
@@ -286,15 +335,22 @@ function initExtension() {
     // Сбрасываем флаг при каждой загрузке/обновлении страницы
     isPopupManuallyClosed = false;
 
-    // Ждем немного для загрузки контента
-    setTimeout(() => {
-        const results = calculateTotalPurchases();
-        if (results.processedElements > 0 || results.totalItems > 0) {
-            displayResults(results);
-        } else {
-            console.log('No purchase items found or page not fully loaded');
+    // Загружаем сохраненный язык
+    chrome.storage.local.get(['language'], function(result) {
+        if (result.language) {
+            currentLanguage = result.language;
         }
-    }, 1000);
+
+        // Ждем немного для загрузки контента
+        setTimeout(() => {
+            const results = calculateTotalPurchases();
+            if (results.processedElements > 0 || results.totalItems > 0) {
+                displayResults(results);
+            } else {
+                console.log('No purchase items found or page not fully loaded');
+            }
+        }, 1000);
+    });
 }
 
 // Запускаем при загрузке страницы
@@ -328,6 +384,14 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         sendResponse({
             success: true,
             isVisible: state.isVisible
+        });
+    }
+
+    // Новое действие для смены языка
+    if (request.action === "setLanguage") {
+        setContentLanguage(request.language);
+        sendResponse({
+            success: true
         });
     }
 

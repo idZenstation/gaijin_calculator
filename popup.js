@@ -20,7 +20,10 @@ const translations = {
 
         // Подсказки
         showPopup: "Показать попап на странице",
-        hidePopup: "Скрыть попап на странице"
+        hidePopup: "Скрыть попап на странице",
+
+        // Состояния загрузки
+        loading: "Загрузка..."
     },
     en: {
         // Headers
@@ -42,7 +45,10 @@ const translations = {
 
         // Tooltips
         showPopup: "Show popup on page",
-        hidePopup: "Hide popup on page"
+        hidePopup: "Hide popup on page",
+
+        // Loading states
+        loading: "Loading..."
     }
 };
 
@@ -62,6 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let isPopupVisible = true;
     let currentStoreType = null;
     let currentLanguage = 'ru';
+    let isLoading = false;
 
     // Функция для установки языка
     function setLanguage(lang) {
@@ -79,8 +86,37 @@ document.addEventListener('DOMContentLoaded', function() {
         // Обновляем все тексты
         updateAllTexts();
 
+        // Обновляем состояние кнопки обновления
+        updateRefreshButtonText();
+
+        // Отправляем язык в content.js
+        sendLanguageToContentScript(lang);
+
         // Сохраняем выбор языка
         chrome.storage.local.set({ language: lang });
+    }
+
+    // Функция для отправки языка в content script
+    function sendLanguageToContentScript(lang) {
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+            if (!tabs[0]) return;
+
+            const storeType = isSupportedPage(tabs[0].url);
+            if (!storeType) return;
+
+            chrome.tabs.sendMessage(
+                tabs[0].id,
+                {
+                    action: "setLanguage",
+                    language: lang
+                },
+                function(response) {
+                    if (chrome.runtime.lastError) {
+                        console.error('Error sending language:', chrome.runtime.lastError);
+                    }
+                }
+            );
+        });
     }
 
     // Функция для обновления всех текстов
@@ -95,11 +131,29 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        // Обновляем атрибуты title
+        document.querySelectorAll('[data-i18n-title]').forEach(element => {
+            const key = element.getAttribute('data-i18n-title');
+            if (texts[key]) {
+                element.title = texts[key];
+            }
+        });
+
         // Обновляем заголовок в зависимости от магазина
         updateHeaderText();
 
         // Обновляем подсказки кнопок
         updateButtonTooltips();
+    }
+
+    // Функция для обновления текста кнопки обновления
+    function updateRefreshButtonText() {
+        const texts = translations[currentLanguage];
+        if (isLoading) {
+            refreshBtn.innerHTML = '<span>⏳</span><span>' + texts.loading + '</span>';
+        } else {
+            refreshBtn.innerHTML = '<span>🔄</span><span>' + texts.refreshButton + '</span>';
+        }
     }
 
     // Функция для обновления заголовка
@@ -153,7 +207,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateUI(results) {
-        totalAmount.textContent = results.total.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') + (currentLanguage === 'ru' ? ' ₽' : ' RUB');
+        const currencySymbol = currentLanguage === 'ru' ? ' ₽' : ' RUB';
+        totalAmount.textContent = results.total.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') + currencySymbol;
         totalItems.textContent = results.totalItems;
         freeItems.textContent = results.freeItems;
         paidItems.textContent = results.paidItems;
@@ -162,20 +217,19 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateToggleButton() {
         const texts = translations[currentLanguage];
         if (isPopupVisible) {
-            togglePopupBtn.textContent = '📊';
             togglePopupBtn.classList.remove('off');
             togglePopupBtn.title = texts.hidePopup;
         } else {
-            togglePopupBtn.textContent = '📊';
             togglePopupBtn.classList.add('off');
             togglePopupBtn.title = texts.showPopup;
         }
     }
 
-    function setLoadingState(isLoading) {
+    function setLoadingState(loading) {
+        isLoading = loading;
         const texts = translations[currentLanguage];
-        if (isLoading) {
-            refreshBtn.innerHTML = '<span>⏳</span><span>' + texts.refreshButton + '</span>';
+        if (loading) {
+            refreshBtn.innerHTML = '<span>⏳</span><span>' + texts.loading + '</span>';
             refreshBtn.disabled = true;
         } else {
             refreshBtn.innerHTML = '<span>🔄</span><span>' + texts.refreshButton + '</span>';

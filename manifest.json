@@ -1,37 +1,40 @@
 {
   "manifest_version": 3,
   "name": "Gaijin Purchase Summary",
-  "version": "1.0",
-  "description": "Подсчитывает общую сумму покупок на странице истории заказов Gaijin Store и PixStorm Store",
+  "version": "1.0.0",
+  "description": "Calculate total purchase amounts in Gaijin Store and PixStorm Store - view your spending statistics",
+
+  "homepage_url": "https://github.com/idZenstation/gaijin_calculator",
+
   "permissions": ["activeTab", "scripting", "storage"],
+
   "action": {
     "default_popup": "popup.html",
-    "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
-    }
+    "default_title": "View purchase statistics"
   },
+
   "content_scripts": [
     {
       "matches": [
-        "*://store.gaijin.net/user.php?view=purchases*",
-        "*://store.pixstorm.ru/user.php?view=purchases*"
+        "https://store.gaijin.net/user.php?view=purchases*",
+        "https://store.pixstorm.ru/user.php?view=purchases*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
   ],
+
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
+
   "web_accessible_resources": [{
     "resources": ["content.js"],
     "matches": [
-      "*://store.gaijin.net/*",
-      "*://store.pixstorm.ru/*"
+      "https://store.gaijin.net/*",
+      "https://store.pixstorm.ru/*"
     ]
   }]
 }

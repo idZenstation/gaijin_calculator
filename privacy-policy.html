@@ -31,18 +31,35 @@
             border-radius: 5px;
             margin-top: 30px;
         }
+        .note {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #ffc107;
+        }
     </style>
 </head>
 <body>
 <h1>Privacy Policy - Gaijin Purchase Summary</h1>
 
 <div class="last-updated">
-    <p><strong>Last updated:</strong> October 20, 2025</p>
+    <p><strong>Last updated:</strong> October 18, 2025</p>
+</div>
+
+<div class="note">
+    <p><strong>Note:</strong> This is an unofficial browser extension and is not affiliated with Gaijin Entertainment or PixStorm.</p>
 </div>
 
 <p><strong>Gaijin Purchase Summary</strong> is committed to protecting your privacy. This extension is designed with privacy as a core principle.</p>
 
-<h2>Data Collection</h2>
+<h2>🌐 Supported Websites</h2>
+<p>This extension only works on the following official store pages:</p>
+<ul>
+    <li>https://store.gaijin.net/user.php?view=purchases</li>
+    <li>https://store.pixstorm.ru/user.php?view=purchases</li>
+</ul>
+
+<h2>📊 Data Collection</h2>
 <p>This extension does NOT:</p>
 <ul>
     <li>Collect any personal information or identification data</li>
@@ -50,41 +67,62 @@
     <li>Share data with third parties or external servers</li>
     <li>Store sensitive information</li>
     <li>Use analytics or tracking cookies</li>
+    <li>Access your account credentials or payment information</li>
 </ul>
 
-<h2>Data Processing</h2>
+<h2>⚙️ Data Processing</h2>
 <p>The extension only processes information locally for its core functionality:</p>
 <ul>
-    <li>Purchase history pages (store.gaijin.net, store.pixstorm.ru)</li>
-    <li>Price and product information for calculation purposes</li>
-    <li>Item quantities and descriptions to generate statistics</li>
+    <li>Reads purchase history pages to extract product information</li>
+    <li>Parses prices and quantities for statistical calculations</li>
+    <li>Differentiates between free and paid items</li>
+    <li>Processes product names and descriptions for counting</li>
     <li>Language preference (stored locally in your browser)</li>
 </ul>
 
-<h2>Data Storage</h2>
+<h2>💾 Data Storage</h2>
 <p>All data is stored locally in your browser using Chrome's storage API:</p>
 <ul>
-    <li>Language settings preference</li>
-    <li>Popup visibility state</li>
-    <li>No purchase data is permanently stored</li>
+    <li>Language settings preference (Russian/English)</li>
+    <li>Popup visibility state (show/hide)</li>
+    <li>No purchase history, personal data, or statistics are stored permanently</li>
+    <li>All calculations are performed in real-time and not saved</li>
 </ul>
 
-<h2>Permissions Explanation</h2>
+<h2>🔐 Permissions Explanation</h2>
 <ul>
-    <li><strong>activeTab</strong> - To interact with current tab content</li>
-    <li><strong>scripting</strong> - To calculate purchase statistics</li>
-    <li><strong>storage</strong> - To save your language preference locally</li>
+    <li><strong>activeTab</strong> - To interact with current tab content on purchase pages</li>
+    <li><strong>scripting</strong> - To calculate purchase statistics from page content</li>
+    <li><strong>storage</strong> - To save your language and display preferences locally</li>
 </ul>
 
-<h2>Third-Party Services</h2>
+<h2>🌍 Multi-language Support</h2>
+<p>The extension supports Russian and English languages. Your language preference is stored locally and never transmitted externally.</p>
+
+<h2>🚫 Third-Party Services</h2>
 <p>This extension does not integrate with any third-party services, APIs, or external servers. All processing happens locally in your browser.</p>
 
-<h2>Contact</h2>
-<p>If you have any questions about this Privacy Policy, please visit the project repository:
-    <a href="https://github.com/idZenstation/gaijin_calculator" target="_blank">GitHub Repository</a></p>
+<h2>📈 Statistical Calculations</h2>
+<p>The extension performs the following calculations locally:</p>
+<ul>
+    <li>Total purchase amount sum</li>
+    <li>Count of total items</li>
+    <li>Separation of free and paid items</li>
+    <li>Quantity calculations for bundled items</li>
+    <li>Currency formatting based on language preference</li>
+</ul>
+
+<h2>🔍 Transparency</h2>
+<p>This extension is open source. You can review the complete source code at:</p>
+<p><a href="https://github.com/idZenstation/gaijin_calculator" target="_blank">https://github.com/idZenstation/gaijin_calculator</a></p>
+
+<h2>📞 Contact & Support</h2>
+<p>If you have any questions about this Privacy Policy or the extension's functionality, please visit the project repository:</p>
+<p><a href="https://github.com/idZenstation/gaijin_calculator" target="_blank">GitHub Repository - Gaijin Purchase Summary</a></p>
 
 <div class="last-updated">
-    <p><strong>Last updated:</strong> October 20, 2025</p>
+    <p><strong>Last updated:</strong> October 18, 2025</p>
+    <p><strong>Extension version:</strong> 1.0.0</p>
 </div>
 </body>
 </html>

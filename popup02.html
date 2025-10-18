@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>Gaijin Purchase Summary</title>
+    <style>
+        body {
+            width: 320px;
+            padding: 0;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #2d3a48;
+            color: #bac2c8;
+        }
+        .container {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #e1ce9b;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 12px;
+            background: #27323f;
+            border-radius: 8px;
+        }
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            justify-content: center;
+        }
+        .toggle-popup-btn {
+            background: #19bcb7;
+            color: #2d3a48;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 6px 10px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        .toggle-popup-btn:hover {
+            background: #17a8a3;
+            transform: translateY(-1px);
+        }
+        .toggle-popup-btn:active {
+            transform: translateY(0);
+        }
+        .toggle-popup-btn.off {
+            background: #dc3545;
+        }
+        .toggle-popup-btn.off:hover {
+            background: #c82333;
+        }
+        .stats-section {
+            background: #27323f;
+            border-radius: 8px;
+            padding: 16px;
+            border: 1px solid #344150;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .stat-total {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #344150;
+        }
+        .total-amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #19bcb7;
+        }
+        .total-label {
+            font-size: 12px;
+            color: #8a949e;
+            text-transform: uppercase;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .stat-label {
+            color: #bac2c8;
+        }
+        .stat-value {
+            font-weight: bold;
+        }
+        .stat-value.total {
+            color: #bac2c8;
+        }
+        .stat-value.free {
+            color: #bac2c8;
+        }
+        .stat-value.paid {
+            color: #19bcb7;
+        }
+        .refresh-btn {
+            padding: 12px;
+            background: #19bcb7;
+            color: #2d3a48;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .refresh-btn:hover {
+            background: #17a8a3;
+            transform: translateY(-1px);
+        }
+        .refresh-btn:active {
+            transform: translateY(0);
+        }
+        .welcome-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            padding: 20px 0;
+        }
+        .welcome-title {
+            color: #e1ce9b;
+            font-size: 18px;
+            text-align: center;
+        }
+        .welcome-text {
+            color: #bac2c8;
+            font-size: 14px;
+            text-align: center;
+            line-height: 1.4;
+        }
+        .store-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
+        .store-btn {
+            padding: 12px;
+            background: #27323f;
+            color: #bac2c8;
+            border: 1px solid #344150;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .store-btn:hover {
+            background: #344150;
+            border-color: #19bcb7;
+            color: #19bcb7;
+        }
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: #8a949e;
+            padding-top: 12px;
+            border-top: 1px solid #344150;
+        }
+        .language-switcher {
+            display: flex;
+            gap: 8px;
+        }
+        .lang-btn {
+            background: none;
+            border: 1px solid #344150;
+            color: #8a949e;
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.2s ease;
+        }
+        .lang-btn:hover {
+            border-color: #19bcb7;
+            color: #19bcb7;
+        }
+        .lang-btn.active {
+            background: #19bcb7;
+            border-color: #19bcb7;
+            color: #2d3a48;
+        }
+        .hidden {
+            display: none !important;
+        }
+        #statsState {
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="header-title">
+            <span>🎯</span>
+            <span id="headerText">Статистика покупок</span>
+        </div>
+        <button class="toggle-popup-btn hidden" id="togglePopupBtn" title="Показать/скрыть попап на странице">
+            📊
+        </button>
+    </div>
+
+    <!-- Состояние: на поддерживаемой странице -->
+    <div id="statsState">
+        <div class="stats-section">
+            <div class="stat-total">
+                <div class="total-label" data-i18n="totalAmount">Общая сумма</div>
+                <div class="total-amount" id="totalAmount">0 ₽</div>
+            </div>
+
+            <div class="stat-row">
+                <span class="stat-label" data-i18n="totalItems">Всего товаров:</span>
+                <span class="stat-value total" id="totalItems">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label" data-i18n="freeItems">Бесплатные:</span>
+                <span class="stat-value free" id="freeItems">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label" data-i18n="paidItems">Платные:</span>
+                <span class="stat-value paid" id="paidItems">0</span>
+            </div>
+        </div>
+
+        <button class="refresh-btn" id="refresh">
+            <span>🔄</span>
+            <span data-i18n="refreshButton">Обновить статистику</span>
+        </button>
+    </div>
+
+    <!-- Состояние: на чужой странице -->
+    <div id="welcomeState" class="hidden">
+        <div class="welcome-section">
+            <div class="welcome-title" data-i18n="welcomeTitle">Добро пожаловать!</div>
+            <div class="welcome-text" data-i18n="welcomeText">
+                Откройте страницу истории покупок в одном из поддерживаемых магазинов:
+            </div>
+
+            <div class="store-buttons">
+                <a href="https://store.gaijin.net/user.php?view=purchases" target="_blank" class="store-btn">
+                    <span>🎮</span>
+                    <span>Gaijin Store</span>
+                </a>
+                <a href="https://store.pixstorm.ru/user.php?view=purchases" target="_blank" class="store-btn">
+                    <span>🌟</span>
+                    <span>PixStorm Store</span>
+                </a>
+            </div>
+
+            <div class="welcome-text" data-i18n="welcomeHint" style="font-size: 12px;">
+                После перехода на страницу покупок откройте это расширение снова
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <span>Gaijin Purchase Summary v1.0</span>
+        <div class="language-switcher">
+            <button class="lang-btn active" data-lang="ru">RU</button>
+            <button class="lang-btn" data-lang="en">EN</button>
+        </div>
+    </div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

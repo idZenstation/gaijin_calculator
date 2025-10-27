@@ -3,8 +3,8 @@ const translations = {
     ru: {
         // Заголовки
         purchaseStats: "Статистика покупок",
-        purchaseStatsGaijin: "Gaijin Store",
-        purchaseStatsPixstorm: "PixStorm Store",
+        purchaseStatsGaijin: "Статистика (Gaijin Store)",
+        purchaseStatsPixstorm: "Статистика (PixStorm Store)",
 
         // Статистика
         totalAmount: "Общая сумма",
@@ -28,8 +28,8 @@ const translations = {
     en: {
         // Headers
         purchaseStats: "Purchase Statistics",
-        purchaseStatsGaijin: "Gaijin Store",
-        purchaseStatsPixstorm: "PixStorm Store",
+        purchaseStatsGaijin: "Statistics (Gaijin Store)",
+        purchaseStatsPixstorm: "Statistics (PixStorm Store)",
 
         // Statistics
         totalAmount: "Total Amount",
@@ -159,14 +159,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Функция для обновления заголовка
     function updateHeaderText() {
         const texts = translations[currentLanguage];
+        let storeName = '';
 
         if (currentStoreType === 'gaijin') {
-            headerText.textContent = texts.purchaseStatsGaijin;
+            storeName = 'Gaijin Store';
         } else if (currentStoreType === 'pixstorm') {
-            headerText.textContent = texts.purchaseStatsPixstorm;
-        } else {
-            headerText.textContent = texts.purchaseStats;
+            storeName = 'PixStorm Store';
         }
+
+        headerText.textContent = storeName ? `${texts.purchaseStats} (${storeName})` : texts.purchaseStats;
     }
 
     // Функция для обновления подсказок кнопок

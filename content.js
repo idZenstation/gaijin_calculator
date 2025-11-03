@@ -16,7 +16,7 @@ const contentTranslations = {
         gaijinStore: "Gaijin Store",
         pixstormStore: "PixStorm Store",
         extendedStats: "Расширенная статистика",
-        mostExpensive: "Самый дорогой товар:",
+        mostExpensive: "Самые дорогие товары:",
         giftsToOthers: "Подарки другим:",
         goldenEagles: "Куплено орлов:",
         eagles: "орлов"
@@ -33,7 +33,7 @@ const contentTranslations = {
         gaijinStore: "Gaijin Store",
         pixstormStore: "PixStorm Store",
         extendedStats: "Extended Statistics",
-        mostExpensive: "Most expensive item:",
+        mostExpensive: "Most expensive items:",
         giftsToOthers: "Gifts to others:",
         goldenEagles: "Golden eagles bought:",
         eagles: "eagles"
@@ -48,7 +48,6 @@ function getTranslation(key) {
 // Функция для установки языка
 function setContentLanguage(lang) {
     currentLanguage = lang;
-    // Если попап открыт - перерисовываем его
     const existingPopup = document.getElementById('gaijin-purchase-summary');
     if (existingPopup && !isPopupManuallyClosed) {
         const results = calculateTotalPurchases();
@@ -70,116 +69,132 @@ function getStoreType() {
 // Функция для получения селекторов в зависимости от магазина
 function getSelectors() {
     const storeType = getStoreType();
+    return {
+        item: '.showcase-item',
+        price: '.showcase-item-price',
+        quantity: '.showcase-item-description__title-comment',
+        title: '.showcase-item-description__title'
+    };
+}
 
-    if (storeType === 'pixstorm') {
-        return {
-            item: '.showcase-item',
-            price: '.showcase-item-price',
-            quantity: '.showcase-item-description__title-comment'
-        };
-    } else {
-        // Gaijin store
-        return {
-            item: '.showcase-item',
-            price: '.showcase-item-price',
-            quantity: '.showcase-item-description__title-comment'
-        };
+// Функция для парсинга цены из текста
+function parsePrice(priceText) {
+    if (!priceText) return 0;
+
+    // Ищем число в формате "1 000 ₽" или "1,000 ₽"
+    const match = priceText.match(/(\d[\d\s,]*)\.?\d*/);
+    if (match) {
+        let priceStr = match[1].replace(/\s/g, '').replace(',', '.');
+        return parseFloat(priceStr) || 0;
     }
+    return 0;
 }
 
-// Новая функция для расчета суммы подарков
-function calculateGiftTotal(donatorBlock) {
-    let giftTotal = 0;
+// Функция для получения чистого названия товара
+function getCleanItemName(item) {
+    const selectors = getSelectors();
+    const titleElement = item.querySelector(selectors.title);
+    const quantityElement = item.querySelector(selectors.quantity);
 
-    // Ищем все элементы с ценами внутри блока донатора
-    const priceElements = donatorBlock.querySelectorAll('.showcase-item-price');
+    if (!titleElement) return 'Unknown Item';
 
-    priceElements.forEach(priceElement => {
-        const priceText = priceElement.textContent.trim();
-        const priceMatch = priceText.match(/([\d\s,.]+)/);
+    let name = titleElement.textContent.trim();
 
-        if (priceMatch) {
-            let priceStr = priceMatch[1].replace(/\s/g, '').replace(',', '.');
-            let price = parseFloat(priceStr);
+    // Удаляем текст количества из названия
+    if (quantityElement) {
+        const quantityText = quantityElement.textContent.trim();
+        name = name.replace(quantityText, '').trim();
+    }
 
-            if (!isNaN(price) && price > 0) {
-                // Получаем количество из родительского элемента
-                const item = priceElement.closest('.showcase-item');
-                const quantityElement = item.querySelector('.showcase-item-description__title-comment');
-                let quantity = 1;
+    return name;
+}
 
-                if (quantityElement) {
-                    const quantityText = quantityElement.textContent.trim();
-                    const quantityMatch = quantityText.match(/(\d+)\s*x/);
-                    if (quantityMatch) {
-                        quantity = parseInt(quantityMatch[1]);
-                    }
-                }
+// Функция для получения количества товара
+function getItemQuantity(item) {
+    const selectors = getSelectors();
+    const quantityElement = item.querySelector(selectors.quantity);
 
-                giftTotal += price * quantity;
-            }
+    if (quantityElement) {
+        const quantityText = quantityElement.textContent.trim();
+        const match = quantityText.match(/(\d+)\s*x/);
+        if (match) {
+            return parseInt(match[1]) || 1;
         }
-    });
-
-    return giftTotal;
+    }
+    return 1;
 }
 
-// Новая функция для расчета золотых орлов (исправленная логика)
-function calculateGoldenEagles() {
-    let totalEagles = 0; // Общее количество орлов
-    let totalSpent = 0;   // Общая сумма потраченная на орлы
+// Функция для проверки, является ли товар золотыми орлами
+function isGoldenEagles(itemName) {
+    if (!itemName) return false;
 
-    const allItems = document.querySelectorAll('.showcase-item');
+    const eaglesPatterns = [
+        /золотых орлов/i,
+        /golden eagles/i,
+        /орлов/i,
+        /eagles/i
+    ];
+
+    return eaglesPatterns.some(pattern => pattern.test(itemName));
+}
+
+// Функция для проверки, является ли товар премиум аккаунтом
+function isPremiumAccount(itemName) {
+    if (!itemName) return false;
+
+    const premiumPatterns = [
+        /premium account/i,
+        /премиум аккаунт/i,
+        /premium.*время/i,
+        /премиум.*время/i,
+        /premium.*дней/i,
+        /премиум.*дней/i,
+        /premium.*days/i,
+        /премиум/i
+    ];
+
+    return premiumPatterns.some(pattern => pattern.test(itemName));
+}
+
+// Функция для проверки, находится ли товар в блоке подарков
+function isGiftItem(item) {
+    // Проверяем, находится ли товар внутри блока донатора
+    const donatorBlock = document.getElementById('PURCH_donator_link');
+    if (donatorBlock && donatorBlock.contains(item)) {
+        return true;
+    }
+
+    return false;
+}
+
+// Функция для расчета золотых орлов
+function calculateGoldenEagles() {
+    let totalEagles = 0;
+    let totalSpent = 0;
+    const selectors = getSelectors();
+    const allItems = document.querySelectorAll(selectors.item);
 
     allItems.forEach(item => {
-        const titleElement = item.querySelector('.showcase-item-description__title');
-        if (titleElement) {
-            const titleText = titleElement.textContent.trim();
+        const itemName = getCleanItemName(item);
 
-            // Проверяем, содержит ли название "Золотых орлов" или "Golden eagles"
-            if (titleText.includes('Золотых орлов') || titleText.includes('Golden eagles') ||
-                titleText.includes('Золотых Орлов') || titleText.includes('Golden Eagles') ||
-                titleText.toLowerCase().includes('golden eagle')) {
+        if (isGoldenEagles(itemName)) {
+            const quantity = getItemQuantity(item);
+            const priceElement = item.querySelector(selectors.price);
 
-                // Получаем количество покупок (например: "25 x")
-                const quantityElement = item.querySelector('.showcase-item-description__title-comment');
-                let purchaseQuantity = 1;
-                if (quantityElement) {
-                    const quantityText = quantityElement.textContent.trim();
-                    const quantityMatch = quantityText.match(/(\d+)\s*x/);
-                    if (quantityMatch) {
-                        purchaseQuantity = parseInt(quantityMatch[1]);
-                    }
-                }
+            if (priceElement) {
+                const priceText = priceElement.textContent.trim();
+                const price = parsePrice(priceText);
 
-                // Получаем количество орлов в одной покупке (например: "5000 Золотых Орлов")
-                const eaglesMatch = titleText.match(/(\d+[\s\d]*)\s*(?:Золотых орлов|Golden eagles|Золотых Орлов|Golden Eagles)/i);
-                let eaglesPerPurchase = 0;
+                if (price > 0) {
+                    // Парсим количество орлов из названия
+                    const eaglesMatch = itemName.match(/(\d+[\s\d]*)\s*(?:Золотых орлов|Golden eagles|орлов|eagles)/i);
+                    if (eaglesMatch) {
+                        const eaglesCount = parseInt(eaglesMatch[1].replace(/\s/g, '')) || 0;
+                        if (eaglesCount > 0) {
+                            totalEagles += eaglesCount * quantity;
+                            totalSpent += price * quantity;
 
-                if (eaglesMatch) {
-                    // Очищаем число от пробелов (например: "5 000" -> 5000)
-                    eaglesPerPurchase = parseInt(eaglesMatch[1].replace(/\s/g, ''));
-                }
-
-                // Получаем цену за одну покупку
-                const priceElement = item.querySelector('.showcase-item-price');
-                if (priceElement && priceElement.textContent.trim()) {
-                    const priceText = priceElement.textContent.trim();
-                    const priceMatch = priceText.match(/([\d\s,.]+)/);
-
-                    if (priceMatch) {
-                        let priceStr = priceMatch[1].replace(/\s/g, '').replace(',', '.');
-                        let pricePerPurchase = parseFloat(priceStr);
-
-                        if (!isNaN(pricePerPurchase) && pricePerPurchase > 0 && !isNaN(eaglesPerPurchase) && eaglesPerPurchase > 0) {
-                            // Рассчитываем общее количество орлов: количество_покупок × орлов_в_покупке
-                            const eaglesInThisItem = purchaseQuantity * eaglesPerPurchase;
-                            totalEagles += eaglesInThisItem;
-
-                            // Рассчитываем общую сумму: количество_покупок × цена_за_покупку
-                            totalSpent += purchaseQuantity * pricePerPurchase;
-
-                            console.log(`Golden eagles: ${purchaseQuantity} × ${eaglesPerPurchase} = ${eaglesInThisItem} eagles, spent: ${purchaseQuantity} × ${pricePerPurchase} = ${purchaseQuantity * pricePerPurchase} ₽`);
+                            console.log(`Golden Eagles: ${quantity} × ${eaglesCount} eagles = ${eaglesCount * quantity} eagles, ${quantity} × ${price} ₽ = ${price * quantity} ₽`);
                         }
                     }
                 }
@@ -190,115 +205,147 @@ function calculateGoldenEagles() {
     return { total: totalSpent, count: totalEagles };
 }
 
-// Функция для расчета суммы покупок
+// Функция для расчета суммы подарков
+function calculateGiftTotal() {
+    let giftTotal = 0;
+    const selectors = getSelectors();
+
+    // Ищем блок донатора разными способами
+    let donatorBlock = document.getElementById('PURCH_donator_link');
+    if (!donatorBlock) {
+        // Альтернативный поиск блока подарков
+        donatorBlock = document.querySelector('[id*="donator"], [class*="donator"]');
+    }
+
+    if (donatorBlock) {
+        console.log('Found donator block:', donatorBlock);
+        const giftItems = donatorBlock.querySelectorAll(selectors.item);
+
+        giftItems.forEach(item => {
+            const priceElement = item.querySelector(selectors.price);
+            if (priceElement) {
+                const priceText = priceElement.textContent.trim();
+                const price = parsePrice(priceText);
+                const quantity = getItemQuantity(item);
+
+                if (price > 0) {
+                    giftTotal += price * quantity;
+                    const itemName = getCleanItemName(item);
+                    console.log(`Gift: ${itemName} - ${price} ₽ × ${quantity} = ${price * quantity} ₽`);
+                }
+            }
+        });
+    } else {
+        console.log('No donator block found');
+    }
+
+    return giftTotal;
+}
+
+// Основная функция расчета
 function calculateTotalPurchases() {
-    console.log('Calculating purchases for store:', getStoreType());
+    console.log('=== STARTING CALCULATION ===');
     const selectors = getSelectors();
     const purchaseItems = document.querySelectorAll(selectors.item);
     let total = 0;
     let totalItems = 0;
     let freeItems = 0;
     let paidItems = 0;
-    let processedElements = 0;
 
-    // Новые переменные для расширенной статистики
-    let mostExpensiveItem = { name: '', price: 0, quantity: 1 };
-    let giftTotal = 0;
-    let goldenEaglesTotal = 0;
-    let goldenEaglesCount = 0;
+    const regularItems = [];
+    const excludedItems = [];
 
-    purchaseItems.forEach(item => {
-        const quantityElement = item.querySelector(selectors.quantity);
-        let quantity = 1;
-        if (quantityElement) {
-            const quantityText = quantityElement.textContent.trim();
-            const quantityMatch = quantityText.match(/(\d+)\s*x/);
-            if (quantityMatch) {
-                quantity = parseInt(quantityMatch[1]);
-            }
+    console.log(`Found ${purchaseItems.length} items total`);
+
+    purchaseItems.forEach((item, index) => {
+        const itemName = getCleanItemName(item);
+        const quantity = getItemQuantity(item);
+        const priceElement = item.querySelector(selectors.price);
+
+        let price = 0;
+        if (priceElement) {
+            const priceText = priceElement.textContent.trim();
+            price = parsePrice(priceText);
         }
 
-        const priceElement = item.querySelector(selectors.price);
-        if (priceElement && priceElement.textContent.trim()) {
-            const priceText = priceElement.textContent.trim();
-            const priceMatch = priceText.match(/([\d\s,.]+)/);
+        const isEagles = isGoldenEagles(itemName);
+        const isPremium = isPremiumAccount(itemName);
+        const isGift = isGiftItem(item);
 
-            if (priceMatch) {
-                let priceStr = priceMatch[1].replace(/\s/g, '').replace(',', '.');
-                let price = parseFloat(priceStr);
+        console.log(`Item ${index + 1}: "${itemName}" - Price: ${price} ₽, Quantity: ${quantity}, Eagles: ${isEagles}, Premium: ${isPremium}, Gift: ${isGift}`);
 
-                if (!isNaN(price)) {
-                    const itemTotal = price * quantity;
-                    total += itemTotal;
+        const itemTotal = price * quantity;
+        total += itemTotal;
+        totalItems += quantity;
 
-                    if (price > 0) {
-                        paidItems += quantity;
+        if (price > 0) {
+            paidItems += quantity;
 
-                        // Проверяем самый дорогой товар
-                        if (price > mostExpensiveItem.price) {
-                            mostExpensiveItem.price = price;
-                            mostExpensiveItem.quantity = quantity;
-                            // Пытаемся получить название товара
-                            const nameElement = item.querySelector('.showcase-item-description__title');
-                            mostExpensiveItem.name = nameElement ?
-                                nameElement.textContent.replace(quantityElement?.textContent || '', '').trim() :
-                                'Unknown Item';
-                        }
-
-                        console.log(`Found paid item: ${price} ₽ x ${quantity}`);
-                    } else {
-                        freeItems += quantity;
-                        console.log(`Found free item: ${price} ₽ x ${quantity}`);
-                    }
-
-                    totalItems += quantity;
-                    processedElements++;
-                } else {
-                    freeItems += quantity;
-                    totalItems += quantity;
-                }
+            // В обычные товары добавляем только если это НЕ орлы, НЕ премиум и НЕ подарки
+            if (!isEagles && !isPremium && !isGift) {
+                regularItems.push({
+                    name: itemName,
+                    price: price,
+                    quantity: quantity,
+                    total: itemTotal
+                });
+                console.log(`✓ ADDED to regular items: ${itemName}`);
             } else {
-                freeItems += quantity;
-                totalItems += quantity;
+                excludedItems.push({
+                    name: itemName,
+                    price: price,
+                    quantity: quantity,
+                    isEagles: isEagles,
+                    isPremium: isPremium,
+                    isGift: isGift
+                });
+                console.log(`✗ EXCLUDED from regular items: ${itemName} (eagles: ${isEagles}, premium: ${isPremium}, gift: ${isGift})`);
             }
         } else {
             freeItems += quantity;
-            totalItems += quantity;
         }
     });
 
-    // Расчет подарков (если есть блок донатора)
-    const donatorBlock = document.getElementById('PURCH_donator_link');
-    if (donatorBlock) {
-        giftTotal = calculateGiftTotal(donatorBlock);
-    }
+    // Сортируем обычные товары по цене (по убыванию) и берем топ-5
+    regularItems.sort((a, b) => b.price - a.price);
+    const mostExpensiveItems = regularItems.slice(0, 5);
 
-    // Расчет золотых орлов
+    // Логируем исключенные товары для отладки
+    console.log('Excluded items:', excludedItems);
+
+    // Расчет золотых орлов (отдельная логика)
     const eaglesData = calculateGoldenEagles();
-    goldenEaglesTotal = eaglesData.total;
-    goldenEaglesCount = eaglesData.count;
 
-    console.log(`Calculation complete: ${total} ₽, Total: ${totalItems}, Paid: ${paidItems}, Free: ${freeItems}`);
-    console.log(`Extended stats: Most expensive: ${mostExpensiveItem.price} ₽, Gifts: ${giftTotal} ₽, Golden Eagles: ${goldenEaglesCount} (${goldenEaglesTotal} ₽)`);
+    // Расчет подарков
+    const giftTotal = calculateGiftTotal();
+
+    console.log('=== CALCULATION RESULTS ===');
+    console.log(`Total: ${total} ₽`);
+    console.log(`Total items: ${totalItems}`);
+    console.log(`Paid items: ${paidItems}`);
+    console.log(`Free items: ${freeItems}`);
+    console.log(`Regular items count: ${regularItems.length}`);
+    console.log(`Excluded items count: ${excludedItems.length}`);
+    console.log(`Most expensive items:`, mostExpensiveItems);
+    console.log(`Golden eagles: ${eaglesData.count} eagles, spent: ${eaglesData.total} ₽`);
+    console.log(`Gifts to others: ${giftTotal} ₽`);
 
     return {
         total: Math.round(total * 100) / 100,
         totalItems,
         freeItems,
         paidItems,
-        processedElements,
+        processedElements: purchaseItems.length,
         storeType: getStoreType(),
-        // Расширенная статистика
-        mostExpensiveItem,
+        mostExpensiveItems,
         giftTotal: Math.round(giftTotal * 100) / 100,
-        goldenEaglesTotal: Math.round(goldenEaglesTotal * 100) / 100,
-        goldenEaglesCount
+        goldenEaglesTotal: Math.round(eaglesData.total * 100) / 100,
+        goldenEaglesCount: eaglesData.count
     };
 }
 
 // Функция для отображения результатов на странице
 function displayResults(results) {
-    // Проверяем, не был ли попап закрыт пользователем
     if (isPopupManuallyClosed) {
         console.log('Popup was manually closed, skipping display');
         return;
@@ -323,8 +370,9 @@ function displayResults(results) {
         box-shadow: 0 8px 24px rgba(0,0,0,0.3);
         z-index: 10000;
         font-family: Arial, sans-serif;
-        min-width: 280px;
+        min-width: 320px;
         color: #bac2c8;
+        max-width: 400px;
     `;
 
     const storeName = results.storeType === 'pixstorm' ? getTranslation('pixstormStore') : getTranslation('gaijinStore');
@@ -342,53 +390,77 @@ function displayResults(results) {
         <!-- Основная статистика -->
         <div style="margin-bottom: 12px; padding: 10px; background: #27323f; border-radius: 6px;">
             <div style="font-size: 14px; color: #bac2c8; margin-bottom: 4px;">${getTranslation('totalAmount')}</div>
-            <div style="font-size: 20px; font-weight: bold; color: #19bcb7;">${results.total.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US')}${currencySymbol}</div>
+            <div style="font-size: 20px; font-weight: bold; color: #19bcb7; text-align: center;">
+                ${results.total.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US')}${currencySymbol}
+            </div>
         </div>
 
-        <div style="margin-bottom: 8px;">
-            <span style="color: #bac2c8;">${getTranslation('totalItems')}</span>
-            <span style="float: right; color: #bac2c8; font-weight: bold;">${results.totalItems}</span>
-        </div>
+        <!-- Основные статистики с Flexbox -->
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #bac2c8;">${getTranslation('totalItems')}</span>
+                <span style="color: #bac2c8; font-weight: bold;">${results.totalItems}</span>
+            </div>
 
-        <div style="margin-bottom: 8px;">
-            <span style="color: #bac2c8;">${getTranslation('freeItems')}</span>
-            <span style="float: right; color: #bac2c8; font-weight: bold;">${results.freeItems}</span>
-        </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #bac2c8;">${getTranslation('freeItems')}</span>
+                <span style="color: #bac2c8; font-weight: bold;">${results.freeItems}</span>
+            </div>
 
-        <div style="margin-bottom: 16px;">
-            <span style="color: #bac2c8;">${getTranslation('paidItems')}</span>
-            <span style="float: right; color: #19bcb7; font-weight: bold;">${results.paidItems}</span>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #bac2c8;">${getTranslation('paidItems')}</span>
+                <span style="color: #19bcb7; font-weight: bold;">${results.paidItems}</span>
+            </div>
         </div>
 
         <!-- Расширенная статистика -->
         <details style="margin-bottom: 12px; background: #27323f; border-radius: 6px; padding: 10px;">
-            <summary style="cursor: pointer; color: #19bcb7; font-weight: bold; font-size: 14px;">
-                📊 ${getTranslation('extendedStats')}
+            <summary style="cursor: pointer; color: #19bcb7; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                <span>📊</span>
+                <span>${getTranslation('extendedStats')}</span>
             </summary>
 
             <div style="margin-top: 10px; border-top: 1px solid #344150; padding-top: 10px;">
-                <div style="margin-bottom: 6px;">
-                    <span style="color: #bac2c8; font-size: 13px;">${getTranslation('mostExpensive')}</span>
-                    <div style="float: right; text-align: right;">
-                        <div style="color: #19bcb7; font-weight: bold; font-size: 13px;">${results.mostExpensiveItem.price > 0 ? results.mostExpensiveItem.price.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') + currencySymbol : '-'}</div>
-                        <div style="color: #8a949e; font-size: 11px;">${results.mostExpensiveItem.name && results.mostExpensiveItem.price > 0 ? (results.mostExpensiveItem.quantity > 1 ? results.mostExpensiveItem.quantity + ' × ' : '') + results.mostExpensiveItem.name.substring(0, 20) + (results.mostExpensiveItem.name.length > 20 ? '...' : '') : ''}</div>
+                <!-- Самые дорогие товары -->
+                <div style="margin-bottom: 12px;">
+                    <div style="color: #bac2c8; font-size: 13px; margin-bottom: 8px;">${getTranslation('mostExpensive')}</div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        ${results.mostExpensiveItems.length > 0 ?
+                            results.mostExpensiveItems.map(item => `
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0;">
+                                    <span style="color: #bac2c8; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 12px;">
+                                        ${item.quantity > 1 ? item.quantity + '× ' : ''}${item.name}
+                                    </span>
+                                    <span style="color: #19bcb7; font-weight: bold; min-width: 80px; text-align: right;">
+                                        ${item.price.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US')}${currencySymbol}
+                                    </span>
+                                </div>
+                            `).join('') :
+                            '<div style="color: #8a949e; text-align: center; font-size: 12px; padding: 8px;">-</div>'
+                        }
                     </div>
                 </div>
 
-                <div style="margin-bottom: 6px;">
-                    <span style="color: #bac2c8; font-size: 13px;">${getTranslation('giftsToOthers')}</span>
-                    <span style="float: right; color: #19bcb7; font-weight: bold; font-size: 13px;">${results.giftTotal > 0 ? results.giftTotal.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') + currencySymbol : '-'}</span>
-                </div>
+                <!-- Расширенные статистики с Flexbox -->
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #bac2c8; font-size: 13px;">${getTranslation('giftsToOthers')}</span>
+                        <span style="color: #19bcb7; font-weight: bold; font-size: 13px;">
+                            ${results.giftTotal > 0 ? results.giftTotal.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') + currencySymbol : '-'}
+                        </span>
+                    </div>
 
-                <div style="margin-bottom: 6px;">
-                    <span style="color: #bac2c8; font-size: 13px;">${getTranslation('goldenEagles')}</span>
-                    <span style="float: right; color: #19bcb7; font-weight: bold; font-size: 13px;">
-                        ${results.goldenEaglesCount > 0 ?
-                            results.goldenEaglesCount.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') +
-                            ' ' + getTranslation('eagles') +
-                            ' (' + results.goldenEaglesTotal.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') + currencySymbol + ')'
-                            : '-'}
-                    </span>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #bac2c8; font-size: 13px;">${getTranslation('goldenEagles')}</span>
+                        <span style="color: #19bcb7; font-weight: bold; font-size: 13px; text-align: right;">
+                            ${results.goldenEaglesCount > 0 ?
+                                results.goldenEaglesCount.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') +
+                                ' ' + getTranslation('eagles') +
+                                ' (' + results.goldenEaglesTotal.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') + currencySymbol + ')'
+                                : '-'
+                            }
+                        </span>
+                    </div>
                 </div>
             </div>
         </details>
@@ -420,6 +492,7 @@ function displayResults(results) {
         display: flex;
         align-items: center;
         justify-content: center;
+        transition: background-color 0.2s ease;
     `;
     closeButton.onmouseover = () => closeButton.style.backgroundColor = '#27323f';
     closeButton.onmouseout = () => closeButton.style.backgroundColor = 'transparent';
@@ -438,7 +511,12 @@ function displayResults(results) {
 
         setTimeout(() => {
             const newResults = calculateTotalPurchases();
-            updatePopupResults(resultsContainer, newResults);
+            // Просто пересоздаем попап - это надежнее
+            const existingPopup = document.getElementById('gaijin-purchase-summary');
+            if (existingPopup) {
+                existingPopup.remove();
+            }
+            displayResults(newResults);
 
             refreshBtn.innerHTML = `🔄 ${getTranslation('refreshButton')}`;
             refreshBtn.disabled = false;
@@ -447,6 +525,13 @@ function displayResults(results) {
 
     resultsContainer.appendChild(closeButton);
     document.body.appendChild(resultsContainer);
+}
+
+// Функция для обновления результатов в попапе
+function updatePopupResults(container, results) {
+    // Просто пересоздаем попап - это надежнее, чем пытаться обновить существующие элементы
+    container.remove();
+    displayResults(results);
 }
 
 // Функция для показа попапа
@@ -485,65 +570,16 @@ function getPopupState() {
     };
 }
 
-// Функция для обновления результатов в попапе
-function updatePopupResults(container, results) {
-    const storeNameElement = container.querySelector('div:nth-child(2)');
-    const totalElement = container.querySelector('div:nth-child(3) div:nth-child(2)');
-    const totalItemsElement = container.querySelector('div:nth-child(4) span:nth-child(2)');
-    const freeItemsElement = container.querySelector('div:nth-child(5) span:nth-child(2)');
-    const paidItemsElement = container.querySelector('div:nth-child(6) span:nth-child(2)');
-    const refreshBtn = container.querySelector('#refreshPopupBtn');
-
-    const storeName = results.storeType === 'pixstorm' ? getTranslation('pixstormStore') : getTranslation('gaijinStore');
-    const currencySymbol = currentLanguage === 'ru' ? ' ₽' : ' RUB';
-
-    if (storeNameElement) storeNameElement.textContent = storeName;
-    if (totalElement) totalElement.textContent = `${results.total.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US')}${currencySymbol}`;
-    if (totalItemsElement) totalItemsElement.textContent = results.totalItems;
-    if (freeItemsElement) freeItemsElement.textContent = results.freeItems;
-    if (paidItemsElement) paidItemsElement.textContent = results.paidItems;
-    if (refreshBtn) refreshBtn.innerHTML = `🔄 ${getTranslation('refreshButton')}`;
-
-    // Обновляем расширенную статистику
-    const expensivePriceElement = container.querySelector('details div:nth-child(1) div:nth-child(1)');
-    const expensiveNameElement = container.querySelector('details div:nth-child(1) div:nth-child(2)');
-    const giftsElement = container.querySelector('details div:nth-child(2) span:nth-child(2)');
-    const eaglesElement = container.querySelector('details div:nth-child(3) span:nth-child(2)');
-
-    if (expensivePriceElement) {
-        expensivePriceElement.textContent = results.mostExpensiveItem.price > 0 ?
-            results.mostExpensiveItem.price.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') + currencySymbol : '-';
-    }
-    if (expensiveNameElement) {
-        expensiveNameElement.textContent = results.mostExpensiveItem.name && results.mostExpensiveItem.price > 0 ?
-            (results.mostExpensiveItem.quantity > 1 ? results.mostExpensiveItem.quantity + ' × ' : '') +
-            results.mostExpensiveItem.name.substring(0, 20) + (results.mostExpensiveItem.name.length > 20 ? '...' : '') : '';
-    }
-    if (giftsElement) {
-        giftsElement.textContent = results.giftTotal > 0 ?
-            results.giftTotal.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') + currencySymbol : '-';
-    }
-    if (eaglesElement) {
-        eaglesElement.textContent = results.goldenEaglesCount > 0 ?
-            results.goldenEaglesCount.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') + ' ' + getTranslation('eagles') +
-            ' (' + results.goldenEaglesTotal.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') + currencySymbol + ')' : '-';
-    }
-}
-
 // Основная функция инициализации
 function initExtension() {
     console.log('Purchase Summary extension loaded for:', getStoreType());
-
-    // Сбрасываем флаг при каждой загрузке/обновлении страницы
     isPopupManuallyClosed = false;
 
-    // Загружаем сохраненный язык
     chrome.storage.local.get(['language'], function(result) {
         if (result.language) {
             currentLanguage = result.language;
         }
 
-        // Ждем немного для загрузки контента
         setTimeout(() => {
             const results = calculateTotalPurchases();
             if (results.processedElements > 0 || results.totalItems > 0) {
@@ -589,7 +625,6 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         });
     }
 
-    // Новое действие для смены языка
     if (request.action === "setLanguage") {
         setContentLanguage(request.language);
         sendResponse({

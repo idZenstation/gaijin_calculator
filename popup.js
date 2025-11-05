@@ -342,4 +342,14 @@ document.addEventListener('DOMContentLoaded', function() {
             checkPopupState();
         }
     });
+    // Обработчик сообщений от content script
+    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+        if (request.action === "popupStateChanged") {
+            // Обновляем состояние переключателя
+            const toggle = document.getElementById('togglePopup');
+            if (toggle) {
+                toggle.checked = request.isVisible;
+            }
+        }
+    });
 });

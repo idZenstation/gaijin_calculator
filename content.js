@@ -2,6 +2,11 @@
 let isPopupManuallyClosed = false;
 let currentLanguage = 'ru';
 
+// Состояние раскрытых элементов попапа
+let popupState = {
+    extendedStatsOpen: false
+};
+
 // Локализация для content.js
 const contentTranslations = {
     ru: {
@@ -52,6 +57,46 @@ function setContentLanguage(lang) {
     if (existingPopup && !isPopupManuallyClosed) {
         const results = calculateTotalPurchases();
         displayResults(results);
+    }
+}
+
+// Функция для сохранения состояния видимости попапа в хранилище
+function savePopupVisibilityState(isVisible) {
+    chrome.storage.local.set({
+        popupVisible: isVisible,
+        popupManuallyClosed: !isVisible
+    }, function() {
+        console.log('Popup visibility state saved:', isVisible);
+    });
+}
+
+// Функция для уведомления popup о изменении состояния
+function notifyPopupAboutStateChange() {
+    chrome.runtime.sendMessage({
+        action: "popupStateChanged",
+        isVisible: !isPopupManuallyClosed && !!document.getElementById('gaijin-purchase-summary')
+    });
+}
+
+// Функция для сохранения состояния попапа
+function savePopupState() {
+    const popup = document.getElementById('gaijin-purchase-summary');
+    if (popup) {
+        const extendedStats = popup.querySelector('details');
+        if (extendedStats) {
+            popupState.extendedStatsOpen = extendedStats.open;
+        }
+    }
+}
+
+// Функция для восстановления состояния попапа
+function restorePopupState() {
+    const popup = document.getElementById('gaijin-purchase-summary');
+    if (popup) {
+        const extendedStats = popup.querySelector('details');
+        if (extendedStats && popupState.extendedStatsOpen) {
+            extendedStats.open = true;
+        }
     }
 }
 
@@ -370,13 +415,18 @@ function displayResults(results) {
         box-shadow: 0 8px 24px rgba(0,0,0,0.3);
         z-index: 10000;
         font-family: Arial, sans-serif;
-        min-width: 320px;
+        width: 380px;
         color: #bac2c8;
-        max-width: 400px;
+        resize: none;
+        overflow: hidden;
+        box-sizing: border-box;
     `;
 
     const storeName = results.storeType === 'pixstorm' ? getTranslation('pixstormStore') : getTranslation('gaijinStore');
     const currencySymbol = currentLanguage === 'ru' ? ' ₽' : ' RUB';
+
+    // Определяем, нужно ли открывать расширенную статистику
+    const shouldOpenExtendedStats = popupState.extendedStatsOpen;
 
     resultsContainer.innerHTML = `
         <div style="font-weight: bold; color: #e1ce9b; margin-bottom: 16px; font-size: 18px; text-align: center;">
@@ -414,7 +464,7 @@ function displayResults(results) {
         </div>
 
         <!-- Расширенная статистика -->
-        <details style="margin-bottom: 12px; background: #27323f; border-radius: 6px; padding: 10px;">
+        <details ${shouldOpenExtendedStats ? 'open' : ''} style="margin-bottom: 12px; background: #27323f; border-radius: 6px; padding: 10px;">
             <summary style="cursor: pointer; color: #19bcb7; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px;">
                 <span>📊</span>
                 <span>${getTranslation('extendedStats')}</span>
@@ -499,6 +549,12 @@ function displayResults(results) {
     closeButton.onclick = () => {
         isPopupManuallyClosed = true;
         resultsContainer.remove();
+
+        // Сохраняем состояние и уведомляем popup
+        savePopupVisibilityState(false);
+        notifyPopupAboutStateChange();
+
+        console.log('Popup closed by user, state saved');
     };
 
     // Кнопка обновления статистики
@@ -509,9 +565,12 @@ function displayResults(results) {
         refreshBtn.innerHTML = `⏳ ${getTranslation('loading')}`;
         refreshBtn.disabled = true;
 
+        // Сохраняем состояние перед обновлением
+        savePopupState();
+
         setTimeout(() => {
             const newResults = calculateTotalPurchases();
-            // Просто пересоздаем попап - это надежнее
+            // Пересоздаем попап с сохраненным состоянием
             const existingPopup = document.getElementById('gaijin-purchase-summary');
             if (existingPopup) {
                 existingPopup.remove();
@@ -523,13 +582,27 @@ function displayResults(results) {
         }, 500);
     };
 
+    // Сохраняем состояние при взаимодействии с details
+    const extendedStats = resultsContainer.querySelector('details');
+    if (extendedStats) {
+        extendedStats.addEventListener('toggle', () => {
+            popupState.extendedStatsOpen = extendedStats.open;
+        });
+    }
+
     resultsContainer.appendChild(closeButton);
     document.body.appendChild(resultsContainer);
+
+    // Сохраняем состояние видимости и уведомляем popup
+    savePopupVisibilityState(true);
+    notifyPopupAboutStateChange();
 }
 
 // Функция для обновления результатов в попапе
 function updatePopupResults(container, results) {
-    // Просто пересоздаем попап - это надежнее, чем пытаться обновить существующие элементы
+    // Сохраняем состояние перед обновлением
+    savePopupState();
+    // Пересоздаем попап
     container.remove();
     displayResults(results);
 }
@@ -550,6 +623,10 @@ function hidePopup() {
     if (oldResults) {
         oldResults.remove();
     }
+
+    // Сохраняем состояние и уведомляем popup
+    savePopupVisibilityState(false);
+    notifyPopupAboutStateChange();
 }
 
 // Функция для переключения видимости попапа
@@ -575,17 +652,28 @@ function initExtension() {
     console.log('Purchase Summary extension loaded for:', getStoreType());
     isPopupManuallyClosed = false;
 
-    chrome.storage.local.get(['language'], function(result) {
+    // Загружаем сохраненное состояние видимости попапа
+    chrome.storage.local.get(['popupVisible', 'popupManuallyClosed', 'language'], function(result) {
         if (result.language) {
             currentLanguage = result.language;
         }
 
+        // Восстанавливаем состояние закрытия попапа
+        if (result.popupManuallyClosed !== undefined) {
+            isPopupManuallyClosed = result.popupManuallyClosed;
+        }
+
         setTimeout(() => {
-            const results = calculateTotalPurchases();
-            if (results.processedElements > 0 || results.totalItems > 0) {
-                displayResults(results);
+            // Показываем попап только если он не был закрыт пользователем
+            if (!isPopupManuallyClosed) {
+                const results = calculateTotalPurchases();
+                if (results.processedElements > 0 || results.totalItems > 0) {
+                    displayResults(results);
+                } else {
+                    console.log('No purchase items found or page not fully loaded');
+                }
             } else {
-                console.log('No purchase items found or page not fully loaded');
+                console.log('Popup was manually closed, skipping display');
             }
         }, 1000);
     });

@@ -13,16 +13,16 @@ const translations = {
         paidItems: "Платные:",
         refreshButton: "Обновить статистику",
 
-        // Приветствие
+        // Welcome
         welcomeTitle: "Добро пожаловать!",
         welcomeText: "Откройте страницу истории покупок в одном из поддерживаемых магазинов:",
         welcomeHint: "После перехода на страницу покупок откройте это расширение снова",
 
-        // Подсказки
+        // Tooltips
         showPopup: "Показать попап на странице",
         hidePopup: "Скрыть попап на странице",
 
-        // Состояния загрузки
+        // Loading states
         loading: "Загрузка..."
     },
     en: {
@@ -65,10 +65,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const welcomeState = document.getElementById('welcomeState');
     const langButtons = document.querySelectorAll('.lang-btn');
 
-    let isPopupVisible = true;
     let currentStoreType = null;
     let currentLanguage = 'ru';
     let isLoading = false;
+    let currentPopupVisible = true;
 
     // Функция для установки языка
     function setLanguage(lang) {
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateHeaderText();
 
         // Обновляем подсказки кнопок
-        updateButtonTooltips();
+        updateToggleButton();
     }
 
     // Функция для обновления текста кнопки обновления
@@ -170,13 +170,17 @@ document.addEventListener('DOMContentLoaded', function() {
         headerText.textContent = storeName ? `${texts.purchaseStats} (${storeName})` : texts.purchaseStats;
     }
 
-    // Функция для обновления подсказок кнопок
-    function updateButtonTooltips() {
+    // Функция для обновления кнопки переключения попапа
+    function updateToggleButton() {
         const texts = translations[currentLanguage];
-        if (isPopupVisible) {
+        if (currentPopupVisible) {
+            togglePopupBtn.classList.remove('off');
             togglePopupBtn.title = texts.hidePopup;
+            togglePopupBtn.innerHTML = '📊';
         } else {
+            togglePopupBtn.classList.add('off');
             togglePopupBtn.title = texts.showPopup;
+            togglePopupBtn.innerHTML = '📈';
         }
     }
 
@@ -199,6 +203,9 @@ document.addEventListener('DOMContentLoaded', function() {
             welcomeState.classList.add('hidden');
             togglePopupBtn.classList.remove('hidden');
             updateHeaderText();
+
+            // При переключении на поддерживаемую страницу сразу проверяем состояние попапа
+            checkPopupState();
         } else {
             statsState.classList.add('hidden');
             welcomeState.classList.remove('hidden');
@@ -213,17 +220,6 @@ document.addEventListener('DOMContentLoaded', function() {
         totalItems.textContent = results.totalItems;
         freeItems.textContent = results.freeItems;
         paidItems.textContent = results.paidItems;
-    }
-
-    function updateToggleButton() {
-        const texts = translations[currentLanguage];
-        if (isPopupVisible) {
-            togglePopupBtn.classList.remove('off');
-            togglePopupBtn.title = texts.hidePopup;
-        } else {
-            togglePopupBtn.classList.add('off');
-            togglePopupBtn.title = texts.showPopup;
-        }
     }
 
     function setLoadingState(loading) {
@@ -282,13 +278,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            const newVisibilityState = !currentPopupVisible;
+
             chrome.tabs.sendMessage(
                 tabs[0].id,
-                {action: "togglePopup", isVisible: !isPopupVisible},
+                {action: "togglePopup", isVisible: newVisibilityState},
                 function(response) {
                     if (response && response.success) {
-                        isPopupVisible = !isPopupVisible;
+                        currentPopupVisible = newVisibilityState;
                         updateToggleButton();
+
+                        // Сохраняем состояние
+                        chrome.storage.local.set({
+                            popupVisible: newVisibilityState,
+                            popupManuallyClosed: !newVisibilityState
+                        });
                     }
                 }
             );
@@ -307,8 +311,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 {action: "getPopupState"},
                 function(response) {
                     if (response && response.success) {
-                        isPopupVisible = response.isVisible;
+                        currentPopupVisible = response.isVisible;
                         updateToggleButton();
+
+                        // Синхронизируем состояние в хранилище
+                        chrome.storage.local.set({
+                            popupVisible: response.isVisible,
+                            popupManuallyClosed: !response.isVisible
+                        });
+                    } else if (chrome.runtime.lastError) {
+                        // Если content script не отвечает, используем сохраненное состояние
+                        console.log('Content script not available, using stored state');
                     }
                 }
             );
@@ -326,30 +339,64 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Загружаем сохраненный язык
-    chrome.storage.local.get(['language'], function(result) {
+    // Обработчик сообщений от content script
+    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+        if (request.action === "popupVisibilityChanged") {
+            // Обновляем состояние переключателя на основе уведомления от content script
+            currentPopupVisible = request.isVisible;
+            updateToggleButton();
+
+            // Синхронизируем состояние в хранилище
+            chrome.storage.local.set({
+                popupVisible: request.isVisible,
+                popupManuallyClosed: !request.isVisible
+            });
+        }
+    });
+
+    // Функция для принудительной синхронизации состояния при открытии popup
+    function forceSyncPopupState() {
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+            if (!tabs[0]) return;
+
+            const storeType = isSupportedPage(tabs[0].url);
+            if (!storeType) return;
+
+            // Всегда запрашиваем актуальное состояние при открытии popup
+            checkPopupState();
+        });
+    }
+
+    // Загружаем сохраненный язык и состояние
+    chrome.storage.local.get(['language', 'popupVisible'], function(result) {
         if (result.language) {
             setLanguage(result.language);
         } else {
             setLanguage('ru');
         }
 
+        // Восстанавливаем состояние видимости попапа из хранилища
+        if (result.popupVisible !== undefined) {
+            currentPopupVisible = result.popupVisible;
+            updateToggleButton();
+        }
+
         // Загружаем данные
         getPurchaseData();
 
-        // Если на поддерживаемой странице - проверяем состояние попапа
-        if (currentStoreType) {
-            checkPopupState();
-        }
+        // Принудительно синхронизируем состояние попапа
+        setTimeout(forceSyncPopupState, 100);
     });
-    // Обработчик сообщений от content script
-    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-        if (request.action === "popupStateChanged") {
-            // Обновляем состояние переключателя
-            const toggle = document.getElementById('togglePopup');
-            if (toggle) {
-                toggle.checked = request.isVisible;
-            }
+
+    // Слушаем события активации вкладки для обновления состояния
+    chrome.tabs.onActivated.addListener(function(activeInfo) {
+        setTimeout(forceSyncPopupState, 100);
+    });
+
+    // Слушаем события обновления вкладок
+    chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+        if (changeInfo.status === 'complete') {
+            setTimeout(forceSyncPopupState, 100);
         }
     });
 });

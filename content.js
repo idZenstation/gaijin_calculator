@@ -60,6 +60,14 @@ function setContentLanguage(lang) {
     }
 }
 
+// Функция для уведомления popup о изменении состояния видимости
+function notifyPopupAboutVisibility() {
+    chrome.runtime.sendMessage({
+        action: "popupVisibilityChanged",
+        isVisible: !isPopupManuallyClosed
+    });
+}
+
 // Функция для сохранения состояния видимости попапа в хранилище
 function savePopupVisibilityState(isVisible) {
     chrome.storage.local.set({
@@ -67,14 +75,6 @@ function savePopupVisibilityState(isVisible) {
         popupManuallyClosed: !isVisible
     }, function() {
         console.log('Popup visibility state saved:', isVisible);
-    });
-}
-
-// Функция для уведомления popup о изменении состояния
-function notifyPopupAboutStateChange() {
-    chrome.runtime.sendMessage({
-        action: "popupStateChanged",
-        isVisible: !isPopupManuallyClosed && !!document.getElementById('gaijin-purchase-summary')
     });
 }
 
@@ -552,7 +552,7 @@ function displayResults(results) {
 
         // Сохраняем состояние и уведомляем popup
         savePopupVisibilityState(false);
-        notifyPopupAboutStateChange();
+        notifyPopupAboutVisibility();
 
         console.log('Popup closed by user, state saved');
     };
@@ -595,7 +595,7 @@ function displayResults(results) {
 
     // Сохраняем состояние видимости и уведомляем popup
     savePopupVisibilityState(true);
-    notifyPopupAboutStateChange();
+    notifyPopupAboutVisibility();
 }
 
 // Функция для обновления результатов в попапе
@@ -613,6 +613,7 @@ function showPopup() {
     const results = calculateTotalPurchases();
     if (results.processedElements > 0 || results.totalItems > 0) {
         displayResults(results);
+        notifyPopupAboutVisibility();
     }
 }
 
@@ -626,7 +627,7 @@ function hidePopup() {
 
     // Сохраняем состояние и уведомляем popup
     savePopupVisibilityState(false);
-    notifyPopupAboutStateChange();
+    notifyPopupAboutVisibility();
 }
 
 // Функция для переключения видимости попапа
@@ -641,8 +642,16 @@ function togglePopup(show) {
 // Функция для получения текущего состояния попапа
 function getPopupState() {
     const popupExists = !!document.getElementById('gaijin-purchase-summary');
+    const isVisible = popupExists && !isPopupManuallyClosed;
+
+    console.log('getPopupState called:', {
+        popupExists,
+        isPopupManuallyClosed,
+        isVisible
+    });
+
     return {
-        isVisible: popupExists && !isPopupManuallyClosed,
+        isVisible: isVisible,
         exists: popupExists
     };
 }
@@ -650,7 +659,6 @@ function getPopupState() {
 // Основная функция инициализации
 function initExtension() {
     console.log('Purchase Summary extension loaded for:', getStoreType());
-    isPopupManuallyClosed = false;
 
     // Загружаем сохраненное состояние видимости попапа
     chrome.storage.local.get(['popupVisible', 'popupManuallyClosed', 'language'], function(result) {
@@ -662,6 +670,11 @@ function initExtension() {
         if (result.popupManuallyClosed !== undefined) {
             isPopupManuallyClosed = result.popupManuallyClosed;
         }
+
+        console.log('Initial state loaded:', {
+            isPopupManuallyClosed,
+            popupVisible: result.popupVisible
+        });
 
         setTimeout(() => {
             // Показываем попап только если он не был закрыт пользователем

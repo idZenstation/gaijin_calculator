@@ -16,7 +16,7 @@
             padding: 16px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 14px;
         }
         .header {
             display: flex;
@@ -24,10 +24,11 @@
             justify-content: space-between;
             color: #e1ce9b;
             font-weight: bold;
-            font-size: 16px;
-            padding: 12px;
+            font-size: 15px;
+            padding: 10px 12px;
             background: #27323f;
             border-radius: 8px;
+            border: 1px solid #344150;
         }
         .header-title {
             display: flex;
@@ -43,17 +44,13 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 12px;
-            padding: 6px 10px;
+            padding: 5px 8px;
             font-weight: bold;
             transition: all 0.2s ease;
             flex-shrink: 0;
         }
         .toggle-popup-btn:hover {
             background: #17a8a3;
-            transform: translateY(-1px);
-        }
-        .toggle-popup-btn:active {
-            transform: translateY(0);
         }
         .toggle-popup-btn.off {
             background: #dc3545;
@@ -64,7 +61,7 @@
         .stats-section {
             background: #27323f;
             border-radius: 8px;
-            padding: 16px;
+            padding: 14px;
             border: 1px solid #344150;
             display: flex;
             flex-direction: column;
@@ -74,9 +71,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #344150;
+            gap: 4px;
         }
         .total-amount {
             font-size: 24px;
@@ -84,32 +79,44 @@
             color: #19bcb7;
         }
         .total-label {
-            font-size: 12px;
+            font-size: 11px;
             color: #8a949e;
             text-transform: uppercase;
         }
-        .stat-row {
+        .stat-tiles {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-top: 2px;
+        }
+        .stat-tile {
+            background: #202a35;
+            border: 1px solid #344150;
+            border-radius: 6px;
+            padding: 8px 4px;
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
             align-items: center;
+            gap: 2px;
         }
-        .stat-label {
-            color: #bac2c8;
+        .stat-tile-label {
+            font-size: 10px;
+            color: #8a949e;
+            text-transform: uppercase;
         }
-        .stat-value {
+        .stat-tile-val {
+            font-size: 15px;
             font-weight: bold;
-        }
-        .stat-value.total {
             color: #bac2c8;
         }
-        .stat-value.free {
-            color: #bac2c8;
+        .stat-tile-val.paid {
+            color: #e1ce9b;
         }
-        .stat-value.paid {
-            color: #19bcb7;
+        .stat-tile-val.free {
+            color: #8a949e;
         }
         .refresh-btn {
-            padding: 12px;
+            padding: 11px;
             background: #19bcb7;
             color: #2d3a48;
             border: none;
@@ -122,48 +129,44 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            margin-top: 16px;
         }
         .refresh-btn:hover {
             background: #17a8a3;
-            transform: translateY(-1px);
-        }
-        .refresh-btn:active {
-            transform: translateY(0);
         }
         .welcome-section {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 16px;
-            padding: 20px 0;
+            gap: 14px;
+            padding: 10px 0;
         }
         .welcome-title {
             color: #e1ce9b;
-            font-size: 18px;
+            font-size: 16px;
             text-align: center;
+            font-weight: bold;
         }
         .welcome-text {
             color: #bac2c8;
-            font-size: 14px;
+            font-size: 13px;
             text-align: center;
             line-height: 1.4;
         }
         .store-buttons {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
             width: 100%;
         }
         .store-btn {
-            padding: 12px;
+            padding: 10px;
             background: #27323f;
             color: #bac2c8;
             border: 1px solid #344150;
             border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 13px;
             transition: all 0.2s ease;
             text-decoration: none;
             text-align: center;
@@ -183,12 +186,12 @@
             align-items: center;
             font-size: 11px;
             color: #8a949e;
-            padding-top: 12px;
+            padding-top: 10px;
             border-top: 1px solid #344150;
         }
         .language-switcher {
             display: flex;
-            gap: 8px;
+            gap: 6px;
         }
         .lang-btn {
             background: none;
@@ -215,6 +218,7 @@
         #statsState {
             display: flex;
             flex-direction: column;
+            gap: 12px;
         }
     </style>
 </head>
@@ -230,7 +234,7 @@
         </button>
     </div>
 
-    <!-- Состояние: на поддерживаемой странице -->
+    <!-- Состояние: на странице истории -->
     <div id="statsState">
         <div class="stats-section">
             <div class="stat-total">
@@ -238,17 +242,20 @@
                 <div class="total-amount" id="totalAmount">0 ₽</div>
             </div>
 
-            <div class="stat-row">
-                <span class="stat-label" data-i18n="totalItems">Всего товаров:</span>
-                <span class="stat-value total" id="totalItems">0</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label" data-i18n="freeItems">Бесплатные:</span>
-                <span class="stat-value free" id="freeItems">0</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label" data-i18n="paidItems">Платные:</span>
-                <span class="stat-value paid" id="paidItems">0</span>
+            <!-- Компактные плитки 3 колонок -->
+            <div class="stat-tiles">
+                <div class="stat-tile">
+                    <span class="stat-tile-label" data-i18n="totalItems">Всего</span>
+                    <span class="stat-tile-val" id="totalItems">0</span>
+                </div>
+                <div class="stat-tile">
+                    <span class="stat-tile-label" data-i18n="paidItems">Платные</span>
+                    <span class="stat-tile-val paid" id="paidItems">0</span>
+                </div>
+                <div class="stat-tile">
+                    <span class="stat-tile-label" data-i18n="freeItems">Бесплатные</span>
+                    <span class="stat-tile-val free" id="freeItems">0</span>
+                </div>
             </div>
         </div>
 
@@ -258,7 +265,7 @@
         </button>
     </div>
 
-    <!-- Состояние: на чужой странице -->
+    <!-- Состояние: не на странице покупок -->
     <div id="welcomeState" class="hidden">
         <div class="welcome-section">
             <div class="welcome-title" data-i18n="welcomeTitle">Добро пожаловать!</div>
@@ -277,14 +284,14 @@
                 </a>
             </div>
 
-            <div class="welcome-text" data-i18n="welcomeHint" style="font-size: 12px;">
+            <div class="welcome-text" data-i18n="welcomeHint" style="font-size: 11px;">
                 После перехода на страницу покупок откройте это расширение снова
             </div>
         </div>
     </div>
 
     <div class="footer">
-        <span>Gaijin Purchase Summary v1.0</span>
+        <span>Gaijin Summary v1.2</span>
         <div class="language-switcher">
             <button class="lang-btn active" data-lang="ru">RU</button>
             <button class="lang-btn" data-lang="en">EN</button>

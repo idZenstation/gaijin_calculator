@@ -1,53 +1,31 @@
-// Локализация
+// Локализация для всплывающего окна расширения
 const translations = {
     ru: {
-        // Заголовки
         purchaseStats: "Статистика покупок",
-        purchaseStatsGaijin: "Статистика (Gaijin Store)",
-        purchaseStatsPixstorm: "Статистика (PixStorm Store)",
-
-        // Статистика
         totalAmount: "Общая сумма",
-        totalItems: "Всего товаров:",
-        freeItems: "Бесплатные:",
-        paidItems: "Платные:",
+        totalItems: "Всего",
+        freeItems: "Бесплатные",
+        paidItems: "Платные",
         refreshButton: "Обновить статистику",
-
-        // Welcome
         welcomeTitle: "Добро пожаловать!",
         welcomeText: "Откройте страницу истории покупок в одном из поддерживаемых магазинов:",
         welcomeHint: "После перехода на страницу покупок откройте это расширение снова",
-
-        // Tooltips
         showPopup: "Показать попап на странице",
         hidePopup: "Скрыть попап на странице",
-
-        // Loading states
         loading: "Загрузка..."
     },
     en: {
-        // Headers
         purchaseStats: "Purchase Statistics",
-        purchaseStatsGaijin: "Statistics (Gaijin Store)",
-        purchaseStatsPixstorm: "Statistics (PixStorm Store)",
-
-        // Statistics
         totalAmount: "Total Amount",
-        totalItems: "Total Items:",
-        freeItems: "Free:",
-        paidItems: "Paid:",
+        totalItems: "Total",
+        freeItems: "Free",
+        paidItems: "Paid",
         refreshButton: "Refresh Statistics",
-
-        // Welcome
         welcomeTitle: "Welcome!",
         welcomeText: "Open the purchase history page in one of the supported stores:",
         welcomeHint: "After navigating to the purchase page, open this extension again",
-
-        // Tooltips
         showPopup: "Show popup on page",
         hidePopup: "Hide popup on page",
-
-        // Loading states
         loading: "Loading..."
     }
 };
@@ -70,11 +48,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let isLoading = false;
     let currentPopupVisible = true;
 
-    // Функция для установки языка
     function setLanguage(lang) {
         currentLanguage = lang;
 
-        // Обновляем активную кнопку языка
         langButtons.forEach(btn => {
             if (btn.dataset.lang === lang) {
                 btn.classList.add('active');
@@ -83,47 +59,34 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Обновляем все тексты
         updateAllTexts();
-
-        // Обновляем состояние кнопки обновления
         updateRefreshButtonText();
-
-        // Отправляем язык в content.js
         sendLanguageToContentScript(lang);
-
-        // Сохраняем выбор языка
         chrome.storage.local.set({ language: lang });
     }
 
-    // Функция для отправки языка в content script
     function sendLanguageToContentScript(lang) {
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            if (!tabs[0]) return;
+            if (!tabs || !tabs[0] || !tabs[0].url) return;
 
             const storeType = isSupportedPage(tabs[0].url);
             if (!storeType) return;
 
             chrome.tabs.sendMessage(
                 tabs[0].id,
-                {
-                    action: "setLanguage",
-                    language: lang
-                },
-                function(response) {
+                { action: "setLanguage", language: lang },
+                function() {
                     if (chrome.runtime.lastError) {
-                        console.error('Error sending language:', chrome.runtime.lastError);
+                        // Игнорируем, если скрипт еще не активен
                     }
                 }
             );
         });
     }
 
-    // Функция для обновления всех текстов
     function updateAllTexts() {
         const texts = translations[currentLanguage];
 
-        // Обновляем элементы с data-i18n
         document.querySelectorAll('[data-i18n]').forEach(element => {
             const key = element.getAttribute('data-i18n');
             if (texts[key]) {
@@ -131,7 +94,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Обновляем атрибуты title
         document.querySelectorAll('[data-i18n-title]').forEach(element => {
             const key = element.getAttribute('data-i18n-title');
             if (texts[key]) {
@@ -139,14 +101,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Обновляем заголовок в зависимости от магазина
         updateHeaderText();
-
-        // Обновляем подсказки кнопок
         updateToggleButton();
     }
 
-    // Функция для обновления текста кнопки обновления
     function updateRefreshButtonText() {
         const texts = translations[currentLanguage];
         if (isLoading) {
@@ -156,7 +114,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Функция для обновления заголовка
     function updateHeaderText() {
         const texts = translations[currentLanguage];
         let storeName = '';
@@ -170,7 +127,6 @@ document.addEventListener('DOMContentLoaded', function() {
         headerText.textContent = storeName ? `${texts.purchaseStats} (${storeName})` : texts.purchaseStats;
     }
 
-    // Функция для обновления кнопки переключения попапа
     function updateToggleButton() {
         const texts = translations[currentLanguage];
         if (currentPopupVisible) {
@@ -184,17 +140,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Функция для проверки поддерживаемой страницы
     function isSupportedPage(url) {
-        if (url.includes('store.gaijin.net/user.php?view=purchases')) {
-            return 'gaijin';
-        } else if (url.includes('store.pixstorm.ru/user.php?view=purchases')) {
-            return 'pixstorm';
-        }
+        if (!url || typeof url !== 'string') return null;
+        if (url.includes('store.gaijin.net/user.php?view=purchases')) return 'gaijin';
+        if (url.includes('store.pixstorm.ru/user.php?view=purchases')) return 'pixstorm';
         return null;
     }
 
-    // Функция для переключения состояний интерфейса
     function setUIState(storeType) {
         currentStoreType = storeType;
 
@@ -203,8 +155,6 @@ document.addEventListener('DOMContentLoaded', function() {
             welcomeState.classList.add('hidden');
             togglePopupBtn.classList.remove('hidden');
             updateHeaderText();
-
-            // При переключении на поддерживаемую страницу сразу проверяем состояние попапа
             checkPopupState();
         } else {
             statsState.classList.add('hidden');
@@ -215,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateUI(results) {
-        const currencySymbol = currentLanguage === 'ru' ? ' ₽' : ' RUB';
+        const currencySymbol = results.currencySymbol || (currentLanguage === 'ru' ? ' ₽' : ' RUB');
         totalAmount.textContent = results.total.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') + currencySymbol;
         totalItems.textContent = results.totalItems;
         freeItems.textContent = results.freeItems;
@@ -238,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setLoadingState(true);
 
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            if (!tabs[0]) {
+            if (!tabs || !tabs[0] || !tabs[0].url) {
                 setLoadingState(false);
                 setUIState(null);
                 return;
@@ -257,12 +207,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 {action: "calculatePurchases"},
                 function(response) {
                     setLoadingState(false);
-
                     if (chrome.runtime.lastError) {
-                        console.error('Error:', chrome.runtime.lastError);
                         return;
                     }
-
                     if (response && response.success && response.results) {
                         updateUI(response.results);
                     }
@@ -271,12 +218,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Функция для переключения видимости попапа на странице
     function togglePopupOnPage() {
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            if (!tabs[0] || !currentStoreType) {
-                return;
-            }
+            if (!tabs || !tabs[0] || !currentStoreType) return;
 
             const newVisibilityState = !currentPopupVisible;
 
@@ -287,8 +231,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (response && response.success) {
                         currentPopupVisible = newVisibilityState;
                         updateToggleButton();
-
-                        // Сохраняем состояние
                         chrome.storage.local.set({
                             popupVisible: newVisibilityState,
                             popupManuallyClosed: !newVisibilityState
@@ -299,12 +241,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Функция для проверки текущего состояния попапа
     function checkPopupState() {
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            if (!tabs[0] || !currentStoreType) {
-                return;
-            }
+            if (!tabs || !tabs[0] || !currentStoreType) return;
 
             chrome.tabs.sendMessage(
                 tabs[0].id,
@@ -313,40 +252,29 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (response && response.success) {
                         currentPopupVisible = response.isVisible;
                         updateToggleButton();
-
-                        // Синхронизируем состояние в хранилище
                         chrome.storage.local.set({
                             popupVisible: response.isVisible,
                             popupManuallyClosed: !response.isVisible
                         });
-                    } else if (chrome.runtime.lastError) {
-                        // Если content script не отвечает, используем сохраненное состояние
-                        console.log('Content script not available, using stored state');
                     }
                 }
             );
         });
     }
 
-    // Обработчики событий
     refreshBtn.addEventListener('click', getPurchaseData);
     togglePopupBtn.addEventListener('click', togglePopupOnPage);
 
-    // Обработчики переключения языка
     langButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             setLanguage(btn.dataset.lang);
         });
     });
 
-    // Обработчик сообщений от content script
-    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+    chrome.runtime.onMessage.addListener(function(request) {
         if (request.action === "popupVisibilityChanged") {
-            // Обновляем состояние переключателя на основе уведомления от content script
             currentPopupVisible = request.isVisible;
             updateToggleButton();
-
-            // Синхронизируем состояние в хранилище
             chrome.storage.local.set({
                 popupVisible: request.isVisible,
                 popupManuallyClosed: !request.isVisible
@@ -354,47 +282,36 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Функция для принудительной синхронизации состояния при открытии popup
     function forceSyncPopupState() {
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            if (!tabs[0]) return;
-
+            if (!tabs || !tabs[0] || !tabs[0].url) return;
             const storeType = isSupportedPage(tabs[0].url);
             if (!storeType) return;
-
-            // Всегда запрашиваем актуальное состояние при открытии popup
             checkPopupState();
         });
     }
 
-    // Загружаем сохраненный язык и состояние
     chrome.storage.local.get(['language', 'popupVisible'], function(result) {
-        if (result.language) {
+        if (result && result.language) {
             setLanguage(result.language);
         } else {
             setLanguage('ru');
         }
 
-        // Восстанавливаем состояние видимости попапа из хранилища
-        if (result.popupVisible !== undefined) {
+        if (result && result.popupVisible !== undefined) {
             currentPopupVisible = result.popupVisible;
             updateToggleButton();
         }
 
-        // Загружаем данные
         getPurchaseData();
-
-        // Принудительно синхронизируем состояние попапа
         setTimeout(forceSyncPopupState, 100);
     });
 
-    // Слушаем события активации вкладки для обновления состояния
-    chrome.tabs.onActivated.addListener(function(activeInfo) {
+    chrome.tabs.onActivated.addListener(function() {
         setTimeout(forceSyncPopupState, 100);
     });
 
-    // Слушаем события обновления вкладок
-    chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+    chrome.tabs.onUpdated.addListener(function(tabId, changeInfo) {
         if (changeInfo.status === 'complete') {
             setTimeout(forceSyncPopupState, 100);
         }

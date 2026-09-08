@@ -12,45 +12,53 @@ const contentTranslations = {
     ru: {
         purchaseStats: "Сумма покупок",
         totalAmount: "Общая сумма",
-        totalItems: "Всего товаров:",
-        freeItems: "Бесплатные товары:",
-        paidItems: "Платные товары:",
+        totalItems: "Всего",
+        freeItems: "Бесплатные",
+        paidItems: "Платные",
         refreshButton: "Обновить статистику",
         allItemsIncluded: "Учтены все товары на странице",
         loading: "Загрузка...",
         gaijinStore: "Gaijin Store",
         pixstormStore: "PixStorm Store",
         extendedStats: "Расширенная статистика",
+        categoriesHeader: "Категории расходов:",
+        goldenEaglesCat: "Золотые орлы:",
+        premiumDaysCat: "Премиум-аккаунт:",
+        packsVehiclesCat: "Пакеты и техника:",
         mostExpensive: "Самые дорогие товары:",
         giftsToOthers: "Подарки другим:",
-        goldenEagles: "Куплено орлов:",
-        eagles: "орлов"
+        eaglesUnit: "орлов",
+        daysUnit: "дней",
+        pcsUnit: "шт."
     },
     en: {
         purchaseStats: "Purchase Summary",
         totalAmount: "Total Amount",
-        totalItems: "Total Items:",
-        freeItems: "Free Items:",
-        paidItems: "Paid Items:",
+        totalItems: "Total",
+        freeItems: "Free",
+        paidItems: "Paid",
         refreshButton: "Refresh Statistics",
         allItemsIncluded: "All items on page included",
         loading: "Loading...",
         gaijinStore: "Gaijin Store",
         pixstormStore: "PixStorm Store",
         extendedStats: "Extended Statistics",
+        categoriesHeader: "Spending Categories:",
+        goldenEaglesCat: "Golden Eagles:",
+        premiumDaysCat: "Premium Account:",
+        packsVehiclesCat: "Packs & Vehicles:",
         mostExpensive: "Most expensive items:",
         giftsToOthers: "Gifts to others:",
-        goldenEagles: "Golden eagles bought:",
-        eagles: "eagles"
+        eaglesUnit: "eagles",
+        daysUnit: "days",
+        pcsUnit: "pcs."
     }
 };
 
-// Функция для получения перевода
 function getTranslation(key) {
     return contentTranslations[currentLanguage][key] || key;
 }
 
-// Функция для установки языка
 function setContentLanguage(lang) {
     currentLanguage = lang;
     const existingPopup = document.getElementById('gaijin-purchase-summary');
@@ -60,7 +68,6 @@ function setContentLanguage(lang) {
     }
 }
 
-// Функция для уведомления popup о изменении состояния видимости
 function notifyPopupAboutVisibility() {
     chrome.runtime.sendMessage({
         action: "popupVisibilityChanged",
@@ -68,17 +75,13 @@ function notifyPopupAboutVisibility() {
     });
 }
 
-// Функция для сохранения состояния видимости попапа в хранилище
 function savePopupVisibilityState(isVisible) {
     chrome.storage.local.set({
         popupVisible: isVisible,
         popupManuallyClosed: !isVisible
-    }, function() {
-        console.log('Popup visibility state saved:', isVisible);
     });
 }
 
-// Функция для сохранения состояния попапа
 function savePopupState() {
     const popup = document.getElementById('gaijin-purchase-summary');
     if (popup) {
@@ -89,31 +92,14 @@ function savePopupState() {
     }
 }
 
-// Функция для восстановления состояния попапа
-function restorePopupState() {
-    const popup = document.getElementById('gaijin-purchase-summary');
-    if (popup) {
-        const extendedStats = popup.querySelector('details');
-        if (extendedStats && popupState.extendedStatsOpen) {
-            extendedStats.open = true;
-        }
-    }
-}
-
-// Функция для определения типа магазина
 function getStoreType() {
     const url = window.location.hostname;
-    if (url.includes('pixstorm.ru')) {
-        return 'pixstorm';
-    } else if (url.includes('gaijin.net')) {
-        return 'gaijin';
-    }
+    if (url.includes('pixstorm.ru')) return 'pixstorm';
+    if (url.includes('gaijin.net')) return 'gaijin';
     return 'unknown';
 }
 
-// Функция для получения селекторов в зависимости от магазина
 function getSelectors() {
-    const storeType = getStoreType();
     return {
         item: '.showcase-item',
         price: '.showcase-item-price',
@@ -122,11 +108,8 @@ function getSelectors() {
     };
 }
 
-// Функция для парсинга цены из текста
 function parsePrice(priceText) {
     if (!priceText) return 0;
-
-    // Ищем число в формате "1 000 ₽" или "1,000 ₽"
     const match = priceText.match(/(\d[\d\s,]*)\.?\d*/);
     if (match) {
         let priceStr = match[1].replace(/\s/g, '').replace(',', '.');
@@ -135,7 +118,6 @@ function parsePrice(priceText) {
     return 0;
 }
 
-// Функция для получения чистого названия товара
 function getCleanItemName(item) {
     const selectors = getSelectors();
     const titleElement = item.querySelector(selectors.title);
@@ -144,17 +126,13 @@ function getCleanItemName(item) {
     if (!titleElement) return 'Unknown Item';
 
     let name = titleElement.textContent.trim();
-
-    // Удаляем текст количества из названия
     if (quantityElement) {
         const quantityText = quantityElement.textContent.trim();
         name = name.replace(quantityText, '').trim();
     }
-
     return name;
 }
 
-// Функция для получения количества товара
 function getItemQuantity(item) {
     const selectors = getSelectors();
     const quantityElement = item.querySelector(selectors.quantity);
@@ -163,146 +141,68 @@ function getItemQuantity(item) {
         const quantityText = quantityElement.textContent.trim();
         const match = quantityText.match(/(\d+)\s*x/);
         if (match) {
-            return parseInt(match[1]) || 1;
+            return parseInt(match[1], 10) || 1;
         }
     }
     return 1;
 }
 
-// Функция для проверки, является ли товар золотыми орлами
 function isGoldenEagles(itemName) {
     if (!itemName) return false;
-
-    const eaglesPatterns = [
-        /золотых орлов/i,
-        /golden eagles/i,
-        /орлов/i,
-        /eagles/i
-    ];
-
+    const eaglesPatterns = [/золотых орлов/i, /golden eagles/i, /орлов/i, /eagles/i];
     return eaglesPatterns.some(pattern => pattern.test(itemName));
 }
 
-// Функция для проверки, является ли товар премиум аккаунтом
-function isPremiumAccount(itemName) {
+function isPurePremiumAccount(itemName) {
     if (!itemName) return false;
-
     const premiumPatterns = [
-        /premium account/i,
+        /премиум-аккаунт/i,
         /премиум аккаунт/i,
-        /premium.*время/i,
-        /премиум.*время/i,
-        /premium.*дней/i,
-        /премиум.*дней/i,
-        /premium.*days/i,
-        /премиум/i
+        /premium account/i,
+        /premium-account/i
     ];
-
     return premiumPatterns.some(pattern => pattern.test(itemName));
 }
 
-// Функция для проверки, находится ли товар в блоке подарков
-function isGiftItem(item) {
-    // Проверяем, находится ли товар внутри блока донатора
-    const donatorBlock = document.getElementById('PURCH_donator_link');
-    if (donatorBlock && donatorBlock.contains(item)) {
-        return true;
-    }
-
-    return false;
+function extractPremiumDays(itemName) {
+    const match = itemName.match(/(\d+)\s*(?:дней|дня|день|days|day)/i);
+    return match ? (parseInt(match[1], 10) || 0) : 0;
 }
 
-// Функция для расчета золотых орлов
-function calculateGoldenEagles() {
-    let totalEagles = 0;
-    let totalSpent = 0;
-    const selectors = getSelectors();
-    const allItems = document.querySelectorAll(selectors.item);
-
-    allItems.forEach(item => {
-        const itemName = getCleanItemName(item);
-
-        if (isGoldenEagles(itemName)) {
-            const quantity = getItemQuantity(item);
-            const priceElement = item.querySelector(selectors.price);
-
-            if (priceElement) {
-                const priceText = priceElement.textContent.trim();
-                const price = parsePrice(priceText);
-
-                if (price > 0) {
-                    // Парсим количество орлов из названия
-                    const eaglesMatch = itemName.match(/(\d+[\s\d]*)\s*(?:Золотых орлов|Golden eagles|орлов|eagles)/i);
-                    if (eaglesMatch) {
-                        const eaglesCount = parseInt(eaglesMatch[1].replace(/\s/g, '')) || 0;
-                        if (eaglesCount > 0) {
-                            totalEagles += eaglesCount * quantity;
-                            totalSpent += price * quantity;
-
-                            console.log(`Golden Eagles: ${quantity} × ${eaglesCount} eagles = ${eaglesCount * quantity} eagles, ${quantity} × ${price} ₽ = ${price * quantity} ₽`);
-                        }
-                    }
-                }
-            }
-        }
-    });
-
-    return { total: totalSpent, count: totalEagles };
+function extractEaglesCount(itemName) {
+    const match = itemName.match(/(\d+[\s\d]*)\s*(?:Золотых орлов|Golden eagles|орлов|eagles)/i);
+    if (match) {
+        return parseInt(match[1].replace(/\s/g, ''), 10) || 0;
+    }
+    return 0;
 }
 
-// Функция для расчета суммы подарков
-function calculateGiftTotal() {
-    let giftTotal = 0;
-    const selectors = getSelectors();
-
-    // Ищем блок донатора разными способами
-    let donatorBlock = document.getElementById('PURCH_donator_link');
-    if (!donatorBlock) {
-        // Альтернативный поиск блока подарков
-        donatorBlock = document.querySelector('[id*="donator"], [class*="donator"]');
-    }
-
-    if (donatorBlock) {
-        console.log('Found donator block:', donatorBlock);
-        const giftItems = donatorBlock.querySelectorAll(selectors.item);
-
-        giftItems.forEach(item => {
-            const priceElement = item.querySelector(selectors.price);
-            if (priceElement) {
-                const priceText = priceElement.textContent.trim();
-                const price = parsePrice(priceText);
-                const quantity = getItemQuantity(item);
-
-                if (price > 0) {
-                    giftTotal += price * quantity;
-                    const itemName = getCleanItemName(item);
-                    console.log(`Gift: ${itemName} - ${price} ₽ × ${quantity} = ${price * quantity} ₽`);
-                }
-            }
-        });
-    } else {
-        console.log('No donator block found');
-    }
-
-    return giftTotal;
-}
-
-// Основная функция расчета
 function calculateTotalPurchases() {
-    console.log('=== STARTING CALCULATION ===');
     const selectors = getSelectors();
     const purchaseItems = document.querySelectorAll(selectors.item);
+
+    const donatorBlock = document.getElementById('PURCH_donator_link') ||
+                         document.querySelector('[id*="donator"], [class*="donator"]');
+
     let total = 0;
     let totalItems = 0;
     let freeItems = 0;
     let paidItems = 0;
+    let giftTotal = 0;
+
+    let eaglesSpent = 0;
+    let totalEagles = 0;
+
+    let premiumSpent = 0;
+    let totalPremiumDays = 0;
+
+    let packsSpent = 0;
+    let totalPacksCount = 0;
 
     const regularItems = [];
-    const excludedItems = [];
+    let detectedCurrency = null;
 
-    console.log(`Found ${purchaseItems.length} items total`);
-
-    purchaseItems.forEach((item, index) => {
+    purchaseItems.forEach((item) => {
         const itemName = getCleanItemName(item);
         const quantity = getItemQuantity(item);
         const priceElement = item.querySelector(selectors.price);
@@ -311,13 +211,16 @@ function calculateTotalPurchases() {
         if (priceElement) {
             const priceText = priceElement.textContent.trim();
             price = parsePrice(priceText);
+
+            if (!detectedCurrency) {
+                const currMatch = priceText.match(/[^\d\s.,]+/);
+                if (currMatch) detectedCurrency = currMatch[0];
+            }
         }
 
+        const isGift = donatorBlock ? donatorBlock.contains(item) : false;
         const isEagles = isGoldenEagles(itemName);
-        const isPremium = isPremiumAccount(itemName);
-        const isGift = isGiftItem(item);
-
-        console.log(`Item ${index + 1}: "${itemName}" - Price: ${price} ₽, Quantity: ${quantity}, Eagles: ${isEagles}, Premium: ${isPremium}, Gift: ${isGift}`);
+        const isPremium = isPurePremiumAccount(itemName);
 
         const itemTotal = price * quantity;
         total += itemTotal;
@@ -326,57 +229,44 @@ function calculateTotalPurchases() {
         if (price > 0) {
             paidItems += quantity;
 
-            // В обычные товары добавляем только если это НЕ орлы, НЕ премиум и НЕ подарки
-            if (!isEagles && !isPremium && !isGift) {
-                regularItems.push({
-                    name: itemName,
-                    price: price,
-                    quantity: quantity,
-                    total: itemTotal
-                });
-                console.log(`✓ ADDED to regular items: ${itemName}`);
+            if (isGift) {
+                giftTotal += itemTotal;
+            }
+
+            if (isEagles) {
+                const eaglesCount = extractEaglesCount(itemName);
+                totalEagles += eaglesCount * quantity;
+                eaglesSpent += itemTotal;
+            } else if (isPremium) {
+                const days = extractPremiumDays(itemName);
+                totalPremiumDays += days * quantity;
+                premiumSpent += itemTotal;
             } else {
-                excludedItems.push({
-                    name: itemName,
-                    price: price,
-                    quantity: quantity,
-                    isEagles: isEagles,
-                    isPremium: isPremium,
-                    isGift: isGift
-                });
-                console.log(`✗ EXCLUDED from regular items: ${itemName} (eagles: ${isEagles}, premium: ${isPremium}, gift: ${isGift})`);
+                totalPacksCount += quantity;
+                packsSpent += itemTotal;
+
+                if (!isGift) {
+                    regularItems.push({
+                        name: itemName,
+                        price: price,
+                        quantity: quantity,
+                        total: itemTotal
+                    });
+                }
             }
         } else {
             freeItems += quantity;
         }
     });
 
-    // Сортируем обычные товары по цене (по убыванию) и берем топ-5
     regularItems.sort((a, b) => b.price - a.price);
     const mostExpensiveItems = regularItems.slice(0, 5);
 
-    // Логируем исключенные товары для отладки
-    console.log('Excluded items:', excludedItems);
-
-    // Расчет золотых орлов (отдельная логика)
-    const eaglesData = calculateGoldenEagles();
-
-    // Расчет подарков
-    const giftTotal = calculateGiftTotal();
-
-    console.log('=== CALCULATION RESULTS ===');
-    console.log(`Total: ${total} ₽`);
-    console.log(`Total items: ${totalItems}`);
-    console.log(`Paid items: ${paidItems}`);
-    console.log(`Free items: ${freeItems}`);
-    console.log(`Regular items count: ${regularItems.length}`);
-    console.log(`Excluded items count: ${excludedItems.length}`);
-    console.log(`Most expensive items:`, mostExpensiveItems);
-    console.log(`Golden eagles: ${eaglesData.count} eagles, spent: ${eaglesData.total} ₽`);
-    console.log(`Gifts to others: ${giftTotal} ₽`);
+    const currencySymbol = detectedCurrency ? ` ${detectedCurrency}` : (currentLanguage === 'ru' ? ' ₽' : ' RUB');
 
     return {
         total: Math.round(total * 100) / 100,
+        currencySymbol,
         totalItems,
         freeItems,
         paidItems,
@@ -384,23 +274,26 @@ function calculateTotalPurchases() {
         storeType: getStoreType(),
         mostExpensiveItems,
         giftTotal: Math.round(giftTotal * 100) / 100,
-        goldenEaglesTotal: Math.round(eaglesData.total * 100) / 100,
-        goldenEaglesCount: eaglesData.count
+        eagles: {
+            count: totalEagles,
+            total: Math.round(eaglesSpent * 100) / 100
+        },
+        premium: {
+            days: totalPremiumDays,
+            total: Math.round(premiumSpent * 100) / 100
+        },
+        packs: {
+            count: totalPacksCount,
+            total: Math.round(packsSpent * 100) / 100
+        }
     };
 }
 
-// Функция для отображения результатов на странице
 function displayResults(results) {
-    if (isPopupManuallyClosed) {
-        console.log('Popup was manually closed, skipping display');
-        return;
-    }
+    if (isPopupManuallyClosed) return;
 
-    // Удаляем старые результаты
     const oldResults = document.getElementById('gaijin-purchase-summary');
-    if (oldResults) {
-        oldResults.remove();
-    }
+    if (oldResults) oldResults.remove();
 
     const resultsContainer = document.createElement('div');
     resultsContainer.id = 'gaijin-purchase-summary';
@@ -415,21 +308,19 @@ function displayResults(results) {
         box-shadow: 0 8px 24px rgba(0,0,0,0.3);
         z-index: 10000;
         font-family: Arial, sans-serif;
-        width: 380px;
+        width: 390px;
+        max-height: 85vh;
+        overflow-y: auto;
         color: #bac2c8;
-        resize: none;
-        overflow: hidden;
         box-sizing: border-box;
     `;
 
     const storeName = results.storeType === 'pixstorm' ? getTranslation('pixstormStore') : getTranslation('gaijinStore');
-    const currencySymbol = currentLanguage === 'ru' ? ' ₽' : ' RUB';
-
-    // Определяем, нужно ли открывать расширенную статистику
+    const currency = results.currencySymbol;
     const shouldOpenExtendedStats = popupState.extendedStatsOpen;
 
     resultsContainer.innerHTML = `
-        <div style="font-weight: bold; color: #e1ce9b; margin-bottom: 16px; font-size: 18px; text-align: center;">
+        <div style="font-weight: bold; color: #e1ce9b; margin-bottom: 14px; font-size: 18px; text-align: center;">
             🎯 ${getTranslation('purchaseStats')}
         </div>
 
@@ -437,80 +328,93 @@ function displayResults(results) {
             ${storeName}
         </div>
 
-        <!-- Основная статистика -->
-        <div style="margin-bottom: 12px; padding: 10px; background: #27323f; border-radius: 6px;">
-            <div style="font-size: 14px; color: #bac2c8; margin-bottom: 4px;">${getTranslation('totalAmount')}</div>
-            <div style="font-size: 20px; font-weight: bold; color: #19bcb7; text-align: center;">
-                ${results.total.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US')}${currencySymbol}
+        <!-- Общая сумма -->
+        <div style="margin-bottom: 10px; padding: 12px 10px; background: #27323f; border-radius: 6px; border: 1px solid #344150;">
+            <div style="font-size: 12px; color: #8a949e; margin-bottom: 4px; text-align: center; text-transform: uppercase;">
+                ${getTranslation('totalAmount')}
+            </div>
+            <div style="font-size: 24px; font-weight: bold; color: #19bcb7; text-align: center;">
+                ${results.total.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US')}${currency}
             </div>
         </div>
 
-        <!-- Основные статистики с Flexbox -->
-        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: #bac2c8;">${getTranslation('totalItems')}</span>
-                <span style="color: #bac2c8; font-weight: bold;">${results.totalItems}</span>
+        <!-- Компактные плитки счетчиков -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+            <div style="background: #27323f; border-radius: 6px; padding: 8px 4px; text-align: center; border: 1px solid #344150;">
+                <div style="font-size: 10px; color: #8a949e; margin-bottom: 2px; text-transform: uppercase;">${getTranslation('totalItems')}</div>
+                <div style="font-size: 16px; font-weight: bold; color: #bac2c8;">${results.totalItems}</div>
             </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: #bac2c8;">${getTranslation('freeItems')}</span>
-                <span style="color: #bac2c8; font-weight: bold;">${results.freeItems}</span>
+            <div style="background: #27323f; border-radius: 6px; padding: 8px 4px; text-align: center; border: 1px solid #344150;">
+                <div style="font-size: 10px; color: #8a949e; margin-bottom: 2px; text-transform: uppercase;">${getTranslation('paidItems')}</div>
+                <div style="font-size: 16px; font-weight: bold; color: #e1ce9b;">${results.paidItems}</div>
             </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: #bac2c8;">${getTranslation('paidItems')}</span>
-                <span style="color: #19bcb7; font-weight: bold;">${results.paidItems}</span>
+            <div style="background: #27323f; border-radius: 6px; padding: 8px 4px; text-align: center; border: 1px solid #344150;">
+                <div style="font-size: 10px; color: #8a949e; margin-bottom: 2px; text-transform: uppercase;">${getTranslation('freeItems')}</div>
+                <div style="font-size: 16px; font-weight: bold; color: #8a949e;">${results.freeItems}</div>
             </div>
         </div>
 
-        <!-- Расширенная статистика -->
-        <details ${shouldOpenExtendedStats ? 'open' : ''} style="margin-bottom: 12px; background: #27323f; border-radius: 6px; padding: 10px;">
-            <summary style="cursor: pointer; color: #19bcb7; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px;">
-                <span>📊</span>
-                <span>${getTranslation('extendedStats')}</span>
+        <!-- Разделы статистики по категориям -->
+        <div style="background: #27323f; border-radius: 6px; padding: 12px 10px; margin-bottom: 12px; border: 1px solid #344150;">
+            <div style="font-size: 11px; font-weight: bold; color: #e1ce9b; margin-bottom: 10px; text-transform: uppercase;">
+                ${getTranslation('categoriesHeader')}
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: #bac2c8;">🦅 ${getTranslation('goldenEaglesCat')}</span>
+                    <span style="text-align: right;">
+                        <b style="color: #e1ce9b;">${results.eagles.count.toLocaleString()}</b> ${getTranslation('eaglesUnit')}
+                        <span style="color: #19bcb7; font-weight: bold;">(${results.eagles.total.toLocaleString()}${currency})</span>
+                    </span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: #bac2c8;">⭐ ${getTranslation('premiumDaysCat')}</span>
+                    <span style="text-align: right;">
+                        <b style="color: #e1ce9b;">${results.premium.days.toLocaleString()}</b> ${getTranslation('daysUnit')}
+                        <span style="color: #19bcb7; font-weight: bold;">(${results.premium.total.toLocaleString()}${currency})</span>
+                    </span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: #bac2c8;">📦 ${getTranslation('packsVehiclesCat')}</span>
+                    <span style="text-align: right;">
+                        <b style="color: #e1ce9b;">${results.packs.count.toLocaleString()}</b> ${getTranslation('pcsUnit')}
+                        <span style="color: #19bcb7; font-weight: bold;">(${results.packs.total.toLocaleString()}${currency})</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Дополнительные детали -->
+        <details ${shouldOpenExtendedStats ? 'open' : ''} style="margin-bottom: 12px; background: #27323f; border-radius: 6px; padding: 10px; border: 1px solid #344150;">
+            <summary style="cursor: pointer; color: #19bcb7; font-weight: bold; font-size: 13px;">
+                📊 ${getTranslation('extendedStats')}
             </summary>
 
             <div style="margin-top: 10px; border-top: 1px solid #344150; padding-top: 10px;">
-                <!-- Самые дорогие товары -->
-                <div style="margin-bottom: 12px;">
-                    <div style="color: #bac2c8; font-size: 13px; margin-bottom: 8px;">${getTranslation('mostExpensive')}</div>
+                <div style="margin-bottom: 10px;">
+                    <div style="color: #bac2c8; font-size: 12px; margin-bottom: 6px;">${getTranslation('mostExpensive')}</div>
                     <div style="display: flex; flex-direction: column; gap: 4px;">
                         ${results.mostExpensiveItems.length > 0 ?
                             results.mostExpensiveItems.map(item => `
-                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0;">
-                                    <span style="color: #bac2c8; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 12px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 2px 0;">
+                                    <span title="${item.name}" style="color: #bac2c8; font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px;">
                                         ${item.quantity > 1 ? item.quantity + '× ' : ''}${item.name}
                                     </span>
-                                    <span style="color: #19bcb7; font-weight: bold; min-width: 80px; text-align: right;">
-                                        ${item.price.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US')}${currencySymbol}
+                                    <span style="color: #19bcb7; font-weight: bold; font-size: 12px; white-space: nowrap;">
+                                        ${item.price.toLocaleString()}${currency}
                                     </span>
                                 </div>
                             `).join('') :
-                            '<div style="color: #8a949e; text-align: center; font-size: 12px; padding: 8px;">-</div>'
+                            '<div style="color: #8a949e; text-align: center; font-size: 12px;">-</div>'
                         }
                     </div>
                 </div>
 
-                <!-- Расширенные статистики с Flexbox -->
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: #bac2c8; font-size: 13px;">${getTranslation('giftsToOthers')}</span>
-                        <span style="color: #19bcb7; font-weight: bold; font-size: 13px;">
-                            ${results.giftTotal > 0 ? results.giftTotal.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') + currencySymbol : '-'}
-                        </span>
-                    </div>
-
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: #bac2c8; font-size: 13px;">${getTranslation('goldenEagles')}</span>
-                        <span style="color: #19bcb7; font-weight: bold; font-size: 13px; text-align: right;">
-                            ${results.goldenEaglesCount > 0 ?
-                                results.goldenEaglesCount.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') +
-                                ' ' + getTranslation('eagles') +
-                                ' (' + results.goldenEaglesTotal.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') + currencySymbol + ')'
-                                : '-'
-                            }
-                        </span>
-                    </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #344150; padding-top: 8px; font-size: 12px;">
+                    <span style="color: #bac2c8;">🎁 ${getTranslation('giftsToOthers')}</span>
+                    <span style="color: #19bcb7; font-weight: bold;">
+                        ${results.giftTotal > 0 ? results.giftTotal.toLocaleString() + currency : '-'}
+                    </span>
                 </div>
             </div>
         </details>
@@ -524,7 +428,6 @@ function displayResults(results) {
         </div>
     `;
 
-    // Кнопка закрытия
     const closeButton = document.createElement('button');
     closeButton.textContent = '×';
     closeButton.style.cssText = `
@@ -538,51 +441,29 @@ function displayResults(results) {
         color: #8a949e;
         width: 24px;
         height: 24px;
-        border-radius: 3px;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: background-color 0.2s ease;
     `;
-    closeButton.onmouseover = () => closeButton.style.backgroundColor = '#27323f';
-    closeButton.onmouseout = () => closeButton.style.backgroundColor = 'transparent';
     closeButton.onclick = () => {
         isPopupManuallyClosed = true;
         resultsContainer.remove();
-
-        // Сохраняем состояние и уведомляем popup
         savePopupVisibilityState(false);
         notifyPopupAboutVisibility();
-
-        console.log('Popup closed by user, state saved');
     };
 
-    // Кнопка обновления статистики
     const refreshBtn = resultsContainer.querySelector('#refreshPopupBtn');
-    refreshBtn.onmouseover = () => refreshBtn.style.backgroundColor = '#17a8a3';
-    refreshBtn.onmouseout = () => refreshBtn.style.backgroundColor = '#19bcb7';
     refreshBtn.onclick = () => {
         refreshBtn.innerHTML = `⏳ ${getTranslation('loading')}`;
         refreshBtn.disabled = true;
-
-        // Сохраняем состояние перед обновлением
         savePopupState();
 
         setTimeout(() => {
             const newResults = calculateTotalPurchases();
-            // Пересоздаем попап с сохраненным состоянием
-            const existingPopup = document.getElementById('gaijin-purchase-summary');
-            if (existingPopup) {
-                existingPopup.remove();
-            }
             displayResults(newResults);
-
-            refreshBtn.innerHTML = `🔄 ${getTranslation('refreshButton')}`;
-            refreshBtn.disabled = false;
-        }, 500);
+        }, 300);
     };
 
-    // Сохраняем состояние при взаимодействии с details
     const extendedStats = resultsContainer.querySelector('details');
     if (extendedStats) {
         extendedStats.addEventListener('toggle', () => {
@@ -593,145 +474,77 @@ function displayResults(results) {
     resultsContainer.appendChild(closeButton);
     document.body.appendChild(resultsContainer);
 
-    // Сохраняем состояние видимости и уведомляем popup
     savePopupVisibilityState(true);
     notifyPopupAboutVisibility();
 }
 
-// Функция для обновления результатов в попапе
-function updatePopupResults(container, results) {
-    // Сохраняем состояние перед обновлением
-    savePopupState();
-    // Пересоздаем попап
-    container.remove();
-    displayResults(results);
-}
-
-// Функция для показа попапа
 function showPopup() {
     isPopupManuallyClosed = false;
     const results = calculateTotalPurchases();
     if (results.processedElements > 0 || results.totalItems > 0) {
         displayResults(results);
-        notifyPopupAboutVisibility();
     }
 }
 
-// Функция для скрытия попапа
 function hidePopup() {
     isPopupManuallyClosed = true;
     const oldResults = document.getElementById('gaijin-purchase-summary');
-    if (oldResults) {
-        oldResults.remove();
-    }
-
-    // Сохраняем состояние и уведомляем popup
+    if (oldResults) oldResults.remove();
     savePopupVisibilityState(false);
     notifyPopupAboutVisibility();
 }
 
-// Функция для переключения видимости попапа
 function togglePopup(show) {
-    if (show) {
-        showPopup();
-    } else {
-        hidePopup();
-    }
+    if (show) showPopup();
+    else hidePopup();
 }
 
-// Функция для получения текущего состояния попапа
 function getPopupState() {
     const popupExists = !!document.getElementById('gaijin-purchase-summary');
-    const isVisible = popupExists && !isPopupManuallyClosed;
-
-    console.log('getPopupState called:', {
-        popupExists,
-        isPopupManuallyClosed,
-        isVisible
-    });
-
     return {
-        isVisible: isVisible,
+        isVisible: popupExists && !isPopupManuallyClosed,
         exists: popupExists
     };
 }
 
-// Основная функция инициализации
 function initExtension() {
-    console.log('Purchase Summary extension loaded for:', getStoreType());
-
-    // Загружаем сохраненное состояние видимости попапа
     chrome.storage.local.get(['popupVisible', 'popupManuallyClosed', 'language'], function(result) {
-        if (result.language) {
-            currentLanguage = result.language;
-        }
-
-        // Восстанавливаем состояние закрытия попапа
-        if (result.popupManuallyClosed !== undefined) {
+        if (result && result.language) currentLanguage = result.language;
+        if (result && result.popupManuallyClosed !== undefined) {
             isPopupManuallyClosed = result.popupManuallyClosed;
         }
 
-        console.log('Initial state loaded:', {
-            isPopupManuallyClosed,
-            popupVisible: result.popupVisible
-        });
-
         setTimeout(() => {
-            // Показываем попап только если он не был закрыт пользователем
             if (!isPopupManuallyClosed) {
                 const results = calculateTotalPurchases();
                 if (results.processedElements > 0 || results.totalItems > 0) {
                     displayResults(results);
-                } else {
-                    console.log('No purchase items found or page not fully loaded');
                 }
-            } else {
-                console.log('Popup was manually closed, skipping display');
             }
         }, 1000);
     });
 }
 
-// Запускаем при загрузке страницы
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initExtension);
 } else {
     initExtension();
 }
 
-// Обработчик сообщений от popup
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-    console.log('Message received:', request);
-
     if (request.action === "calculatePurchases") {
-        const results = calculateTotalPurchases();
-        sendResponse({
-            success: true,
-            results: results
-        });
+        sendResponse({ success: true, results: calculateTotalPurchases() });
     }
-
     if (request.action === "togglePopup") {
         togglePopup(request.isVisible);
-        sendResponse({
-            success: true
-        });
+        sendResponse({ success: true });
     }
-
     if (request.action === "getPopupState") {
-        const state = getPopupState();
-        sendResponse({
-            success: true,
-            isVisible: state.isVisible
-        });
+        sendResponse({ success: true, isVisible: getPopupState().isVisible });
     }
-
     if (request.action === "setLanguage") {
         setContentLanguage(request.language);
-        sendResponse({
-            success: true
-        });
+        sendResponse({ success: true });
     }
-
     return true;
 });

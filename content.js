@@ -102,20 +102,60 @@ function getStoreType() {
 function getSelectors() {
     return {
         item: '.showcase-item',
-        price: '.showcase-item-price',
+        // Prefer payable/current price nodes; fall back to the container (may include old+new).
+        price: '.showcase-item-price__new, .showcase-item-price__default, .showcase-item-price',
         quantity: '.showcase-item-description__title-comment',
         title: '.showcase-item-description__title'
     };
 }
 
+/**
+ * Parse a store price string into a number.
+ * Handles "$59.99", "1 234,56 ₽", "1.234,56", "1,234.56", and dual old/new text
+ * (uses the last numeric token, typically the discounted/payable amount).
+ */
 function parsePrice(priceText) {
     if (!priceText) return 0;
-    const match = priceText.match(/(\d[\d\s,]*)\.?\d*/);
-    if (match) {
-        let priceStr = match[1].replace(/\s/g, '').replace(',', '.');
-        return parseFloat(priceStr) || 0;
+
+    // Contiguous runs of digits / spaces / separators; currency symbols break tokens
+    // so "$165 $114" yields ["165", "114"] and we keep the last (payable) amount.
+    const rawTokens = priceText.match(/\d[\d\s.,]*/g);
+    if (!rawTokens || !rawTokens.length) return 0;
+
+    const tokens = rawTokens
+        .map((t) => t.replace(/\s/g, '').replace(/[.,]+$/, ''))
+        .filter(Boolean);
+    if (!tokens.length) return 0;
+
+    const token = tokens[tokens.length - 1];
+    const lastComma = token.lastIndexOf(',');
+    const lastDot = token.lastIndexOf('.');
+
+    let normalized;
+    if (lastComma >= 0 && lastDot >= 0) {
+        if (lastComma > lastDot) {
+            // 1.234,56 — dots thousands, comma decimal
+            normalized = token.replace(/\./g, '').replace(',', '.');
+        } else {
+            // 1,234.56 — commas thousands, dot decimal
+            normalized = token.replace(/,/g, '');
+        }
+    } else if (lastComma >= 0) {
+        const fracLen = token.length - lastComma - 1;
+        normalized = fracLen > 0 && fracLen <= 2
+            ? token.replace(',', '.')
+            : token.replace(/,/g, '');
+    } else if (lastDot >= 0) {
+        const fracLen = token.length - lastDot - 1;
+        normalized = fracLen > 0 && fracLen <= 2
+            ? token
+            : token.replace(/\./g, '');
+    } else {
+        normalized = token;
     }
-    return 0;
+
+    const value = parseFloat(normalized);
+    return Number.isFinite(value) ? value : 0;
 }
 
 function getCleanItemName(item) {

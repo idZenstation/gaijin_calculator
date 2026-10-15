@@ -35,7 +35,15 @@
             align-items: center;
             gap: 8px;
             flex: 1;
+            min-width: 0;
             justify-content: center;
+        }
+        #headerText {
+            display: block;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .toggle-popup-btn {
             background: #19bcb7;
@@ -73,15 +81,18 @@
             align-items: center;
             gap: 4px;
         }
-        .total-amount {
-            font-size: 24px;
-            font-weight: bold;
-            color: #19bcb7;
-        }
         .total-label {
             font-size: 11px;
             color: #8a949e;
             text-transform: uppercase;
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+        }
+        .total-amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #19bcb7;
+            white-space: nowrap;
         }
         .stat-tiles {
             display: grid;
@@ -114,6 +125,36 @@
         }
         .stat-tile-val.free {
             color: #8a949e;
+        }
+        .status-line {
+            font-size: 11px;
+            color: #8a949e;
+            text-align: center;
+            line-height: 1.35;
+            min-height: 14px;
+            text-wrap: balance;
+        }
+        .stat-tile-label,
+        .stat-tile-val {
+            white-space: nowrap;
+        }
+        body {
+            scrollbar-width: thin;
+            scrollbar-color: #19bcb7 #202a35;
+        }
+        body::-webkit-scrollbar {
+            width: 8px;
+        }
+        body::-webkit-scrollbar-track {
+            background: #202a35;
+        }
+        body::-webkit-scrollbar-thumb {
+            background: #19bcb7;
+            border-radius: 8px;
+            border: 2px solid #202a35;
+        }
+        body::-webkit-scrollbar-thumb:hover {
+            background: #e1ce9b;
         }
         .refresh-btn {
             padding: 11px;
@@ -238,7 +279,7 @@
     <div id="statsState">
         <div class="stats-section">
             <div class="stat-total">
-                <div class="total-label" data-i18n="totalAmount">Общая сумма</div>
+                <div class="total-label" data-i18n="totalAmount">Общая сумма (+ подарки)</div>
                 <div class="total-amount" id="totalAmount">0 ₽</div>
             </div>
 
@@ -257,6 +298,7 @@
                     <span class="stat-tile-val free" id="freeItems">0</span>
                 </div>
             </div>
+            <div id="statusLine" class="status-line"></div>
         </div>
 
         <button class="refresh-btn" id="refresh">
@@ -291,7 +333,7 @@
     </div>
 
     <div class="footer">
-        <span>Gaijin Summary v1.2</span>
+        <span>Gaijin Summary v1.3</span>
         <div class="language-switcher">
             <button class="lang-btn active" data-lang="ru">RU</button>
             <button class="lang-btn" data-lang="en">EN</button>

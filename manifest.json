@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Gaijin Purchase Summary",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Calculate total purchase amounts in Gaijin Store and PixStorm Store - view your spending statistics",
   "homepage_url": "https://github.com/idZenstation/gaijin_calculator",
 
@@ -20,10 +20,19 @@
   "content_scripts": [
     {
       "matches": [
-        "https://store.gaijin.net/user.php?view=purchases*",
-        "https://store.pixstorm.ru/user.php?view=purchases*"
+        "https://store.gaijin.net/user.php*",
+        "https://store.pixstorm.ru/user.php*"
       ],
-      "js": ["content.js"],
+      "js": ["expand.js"],
+      "world": "MAIN",
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://store.gaijin.net/user.php*",
+        "https://store.pixstorm.ru/user.php*"
+      ],
+      "js": ["price.js", "content.js"],
       "run_at": "document_idle"
     }
   ],

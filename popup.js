@@ -2,11 +2,14 @@
 const translations = {
     ru: {
         purchaseStats: "Статистика покупок",
-        totalAmount: "Общая сумма",
+        totalAmount: "Общая сумма (+ подарки)",
         totalItems: "Всего",
         freeItems: "Бесплатные",
         paidItems: "Платные",
         refreshButton: "Обновить статистику",
+        openingLists: "Открываем списки покупок…",
+        listsIncluded: "Свои покупки. Подарки вам в сумму не входят",
+        scriptMissing: "Обновите вкладку с историей покупок и откройте расширение снова",
         welcomeTitle: "Добро пожаловать!",
         welcomeText: "Откройте страницу истории покупок в одном из поддерживаемых магазинов:",
         welcomeHint: "После перехода на страницу покупок откройте это расширение снова",
@@ -16,11 +19,14 @@ const translations = {
     },
     en: {
         purchaseStats: "Purchase Statistics",
-        totalAmount: "Total Amount",
+        totalAmount: "Total (+ gifts)",
         totalItems: "Total",
         freeItems: "Free",
         paidItems: "Paid",
         refreshButton: "Refresh Statistics",
+        openingLists: "Opening purchase lists…",
+        listsIncluded: "Your purchases only. Gifts to you are not included",
+        scriptMissing: "Reload the purchase history tab, then open the extension again",
         welcomeTitle: "Welcome!",
         welcomeText: "Open the purchase history page in one of the supported stores:",
         welcomeHint: "After navigating to the purchase page, open this extension again",
@@ -37,6 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalItems = document.getElementById('totalItems');
     const freeItems = document.getElementById('freeItems');
     const paidItems = document.getElementById('paidItems');
+    const statusLine = document.getElementById('statusLine');
     const headerText = document.getElementById('headerText');
 
     const statsState = document.getElementById('statsState');
@@ -47,6 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentLanguage = 'ru';
     let isLoading = false;
     let currentPopupVisible = true;
+    let lastResults = null;
 
     function setLanguage(lang) {
         currentLanguage = lang;
@@ -103,6 +111,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         updateHeaderText();
         updateToggleButton();
+        if (lastResults) setStatus(lastResults);
     }
 
     function updateRefreshButtonText() {
@@ -124,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
             storeName = 'PixStorm Store';
         }
 
-        headerText.textContent = storeName ? `${texts.purchaseStats} (${storeName})` : texts.purchaseStats;
+        headerText.textContent = storeName ? texts.purchaseStats + ' (' + storeName + ')' : texts.purchaseStats;
     }
 
     function updateToggleButton() {
@@ -142,9 +151,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function isSupportedPage(url) {
         if (!url || typeof url !== 'string') return null;
-        if (url.includes('store.gaijin.net/user.php?view=purchases')) return 'gaijin';
-        if (url.includes('store.pixstorm.ru/user.php?view=purchases')) return 'pixstorm';
-        return null;
+        let parsed;
+        try {
+            parsed = new URL(url);
+        } catch (error) {
+            return null;
+        }
+
+        let store = null;
+        if (parsed.hostname === 'store.gaijin.net') store = 'gaijin';
+        else if (parsed.hostname === 'store.pixstorm.ru') store = 'pixstorm';
+        if (!store || !parsed.pathname.endsWith('/user.php')) return null;
+        if (parsed.searchParams.get('view') !== 'purchases') return null;
+        return store;
+    }
+
+    function setStatus(results, errorText) {
+        const texts = translations[currentLanguage];
+        if (!statusLine) return;
+        if (errorText) {
+            statusLine.textContent = errorText;
+            return;
+        }
+        if (!results) {
+            statusLine.textContent = '';
+            return;
+        }
+        if (results.sectionsLoading) {
+            statusLine.textContent = texts.openingLists;
+            return;
+        }
+        statusLine.textContent = texts.listsIncluded;
     }
 
     function setUIState(storeType) {
@@ -165,11 +202,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateUI(results) {
-        const currencySymbol = results.currencySymbol || (currentLanguage === 'ru' ? ' ₽' : ' RUB');
-        totalAmount.textContent = results.total.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US') + currencySymbol;
+        lastResults = results;
+        totalAmount.textContent = results.totalLabel || '0';
         totalItems.textContent = results.totalItems;
         freeItems.textContent = results.freeItems;
         paidItems.textContent = results.paidItems;
+        setStatus(results);
     }
 
     function setLoadingState(loading) {
@@ -199,8 +237,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (!storeType) {
                 setLoadingState(false);
+                setStatus(null);
                 return;
             }
+
+            setStatus({ sectionsLoading: true });
 
             chrome.tabs.sendMessage(
                 tabs[0].id,
@@ -208,10 +249,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 function(response) {
                     setLoadingState(false);
                     if (chrome.runtime.lastError) {
+                        setStatus(null, translations[currentLanguage].scriptMissing);
                         return;
                     }
                     if (response && response.success && response.results) {
                         updateUI(response.results);
+                    } else {
+                        setStatus(null, translations[currentLanguage].scriptMissing);
                     }
                 }
             );
@@ -272,6 +316,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     chrome.runtime.onMessage.addListener(function(request) {
+        if (request.action === "purchaseResults" && request.results && currentStoreType) {
+            updateUI(request.results);
+        }
         if (request.action === "popupVisibilityChanged") {
             currentPopupVisible = request.isVisible;
             updateToggleButton();

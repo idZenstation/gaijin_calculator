@@ -43,7 +43,7 @@
 <h1>Privacy Policy - Gaijin Purchase Summary</h1>
 
 <div class="last-updated">
-    <p><strong>Last updated:</strong> September 9, 2026</p>
+    <p><strong>Last updated:</strong> October 15, 2026</p>
 </div>
 
 <div class="note">
@@ -57,27 +57,33 @@
 <ul>
     <li>https://store.gaijin.net/user.php?view=purchases</li>
     <li>https://store.pixstorm.ru/user.php?view=purchases</li>
+    <li>https://store.gaijin.net/balance_history.php</li>
+    <li>https://trade.gaijin.net/</li>
 </ul>
 
 <h2>📊 Data Collection</h2>
-<p>This extension does NOT:</p>
+<p>The extension handles data only to show your own spending statistics. It does not sell data, use it for advertising, or send it to the developer.</p>
+<p>It does handle:</p>
 <ul>
-    <li>Collect any personal information or identification data</li>
-    <li>Track user behavior or browsing history</li>
-    <li>Share data with third parties or external servers</li>
-    <li>Store sensitive information</li>
+    <li>Financial information shown on the store purchase page and the GJN balance ledger you have open: item names, prices, dates, top-ups, purchases and sales</li>
+    <li>Authentication information: the market session token that trade.gaijin.net already stored in this browser, used only to read your trade history and lot names</li>
+</ul>
+<p>It does not:</p>
+<ul>
+    <li>Track browsing history outside the supported pages listed above</li>
+    <li>Read your store password or payment card</li>
+    <li>Place market orders or change your balance</li>
     <li>Use analytics or tracking cookies</li>
-    <li>Access your account credentials or payment information</li>
+    <li>Send data to any server other than Gaijin's own market server, market-proxy.gaijin.net</li>
 </ul>
 
 <h2>⚙️ Data Processing</h2>
-<p>The extension only processes information locally for its core functionality:</p>
+<p>Processing happens in your browser:</p>
 <ul>
-    <li>Reads purchase history pages to extract product information</li>
-    <li>Parses prices, quantities, and spending categories for statistics</li>
-    <li>Differentiates between free and paid items</li>
-    <li>Processes product names and descriptions for counting</li>
-    <li>Language preference (stored locally in your browser)</li>
+    <li>Reads the purchase history page you opened and totals prices, quantities, categories and gifts</li>
+    <li>Reads the GJN ledger on the balance history page you opened</li>
+    <li>Reads the market session from trade.gaijin.net and requests your trade history and item types from market-proxy.gaijin.net. If that page is not open, the extension may open it in the background so lot names and categories can load</li>
+    <li>Stores your language, whether the panel is visible, the panel position, the market session token and lot names locally in the browser</li>
 </ul>
 
 <h2>💾 Data Storage</h2>
@@ -85,21 +91,23 @@
 <ul>
     <li>Language settings preference (Russian/English)</li>
     <li>Popup visibility state (show/hide)</li>
-    <li>No purchase history, personal data, or statistics are stored permanently</li>
-    <li>All calculations are performed in real-time and not saved</li>
+    <li>Store purchase statistics are calculated on the page and are not saved</li>
+    <li>The market session token and lot names are kept locally so the balance page can label deals</li>
 </ul>
 
 <h2>🔐 Permissions Explanation</h2>
 <ul>
     <li><strong>activeTab</strong> - To check if the current active tab is a supported store page and manage overlay state</li>
-    <li><strong>storage</strong> - To save your language and display preferences locally</li>
+    <li><strong>storage</strong> - To save your language, display preferences, and the market session token already issued to your browser</li>
+    <li><strong>trade.gaijin.net</strong> - To read the market session and, if needed, open the market page in the background</li>
+    <li><strong>market-proxy.gaijin.net</strong> - To read your trade history, lot names and item types</li>
 </ul>
 
 <h2>🌍 Multi-language Support</h2>
 <p>The extension supports Russian and English languages. Your language preference is stored locally and never transmitted externally.</p>
 
 <h2>🚫 Third-Party Services</h2>
-<p>This extension does not integrate with any third-party services, APIs, or external servers. All processing happens locally in your browser.</p>
+<p>Store purchase totals are calculated locally. Lot names for the GJN ledger are requested from Gaijin's own market server, market-proxy.gaijin.net, using the session the market site already created. The extension does not send that data to anyone else.</p>
 
 <h2>📈 Statistical Calculations</h2>
 <p>The extension performs the following calculations locally:</p>
@@ -120,7 +128,7 @@
 <p><a href="https://github.com/idZenstation/gaijin_calculator" target="_blank">GitHub Repository - Gaijin Purchase Summary</a></p>
 
 <div class="last-updated">
-    <p><strong>Extension version:</strong> 1.3.0</p>
+    <p><strong>Extension version:</strong> 2.0.0</p>
 </div>
 </body>
 </html>

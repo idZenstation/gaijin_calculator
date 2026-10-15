@@ -261,6 +261,15 @@
             flex-direction: column;
             gap: 12px;
         }
+        #statsState.market-mode #totalItems,
+        #statsState.market-mode #paidItems,
+        #statsState.market-mode #freeItems {
+            color: #19bcb7;
+            font-size: 11px;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
     </style>
 </head>
 <body>
@@ -301,6 +310,11 @@
             <div id="statusLine" class="status-line"></div>
         </div>
 
+        <a id="marketPageLink" href="https://store.gaijin.net/balance_history.php" target="_blank" class="store-btn hidden">
+            <span>📈</span>
+            <span data-i18n="marketPage">Биржа</span>
+        </a>
+
         <button class="refresh-btn" id="refresh">
             <span>🔄</span>
             <span data-i18n="refreshButton">Обновить статистику</span>
@@ -324,6 +338,10 @@
                     <span>🌟</span>
                     <span>PixStorm Store</span>
                 </a>
+                <a href="https://store.gaijin.net/balance_history.php" target="_blank" class="store-btn">
+                    <span>📈</span>
+                    <span data-i18n="marketPage">Биржа</span>
+                </a>
             </div>
 
             <div class="welcome-text" data-i18n="welcomeHint" style="font-size: 11px;">
@@ -333,7 +351,7 @@
     </div>
 
     <div class="footer">
-        <span>Gaijin Summary v1.3</span>
+        <span>Gaijin Summary v2.0</span>
         <div class="language-switcher">
             <button class="lang-btn active" data-lang="ru">RU</button>
             <button class="lang-btn" data-lang="en">EN</button>

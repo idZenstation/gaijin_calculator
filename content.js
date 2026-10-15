@@ -40,7 +40,9 @@ const contentTranslations = {
         eaglesUnit: "орлов",
         daysUnit: "дней",
         pcsUnit: "шт.",
-        unknownItem: "Без названия"
+        unknownItem: "Без названия",
+        marketPage: "Биржа",
+        spent: "Потрачено"
     },
     en: {
         purchaseStats: "Purchase Summary",
@@ -72,7 +74,9 @@ const contentTranslations = {
         eaglesUnit: "eagles",
         daysUnit: "days",
         pcsUnit: "pcs.",
-        unknownItem: "Untitled"
+        unknownItem: "Untitled",
+        marketPage: "Market",
+        spent: "Spent"
     }
 };
 
@@ -103,7 +107,7 @@ function isPurchasesPage() {
 }
 
 function setContentLanguage(lang) {
-    currentLanguage = lang;
+    currentLanguage = lang === 'en' ? 'en' : 'ru';
     lastSignature = '';
     if (!isPopupManuallyClosed && isPurchasesPage()) {
         displayResults(calculateTotalPurchases());
@@ -600,20 +604,70 @@ function buildYearBreakdown(points, symbol) {
         .sort((a, b) => b[0] - a[0])
         .map(([year, data]) => ({
             year: year,
+            amount: Object.values(data.money.amounts).reduce((sum, value) => sum + value, 0),
             totalLabel: GaijinPrice.formatMoney(data.money, currentLanguage, symbol),
             months: [...data.months.entries()]
                 .sort((a, b) => a[0] - b[0])
                 .map(([month, money]) => ({
                     icon: monthIcons[month - 1] || '📅',
                     name: Array.isArray(monthNames) ? monthNames[month - 1] : String(month),
+                    month: month,
+                    amount: Object.values(money.amounts).reduce((sum, value) => sum + value, 0),
                     totalLabel: GaijinPrice.formatMoney(money, currentLanguage, symbol)
                 }))
         }));
 }
 
+function shortAmount(amount) {
+    const abs = Math.abs(Number(amount) || 0);
+    const digits = abs >= 100 ? 0 : 2;
+    const text = abs.toLocaleString(currentLanguage === 'ru' ? 'ru-RU' : 'en-US', {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+    });
+    return (amount < 0 ? '−' : '') + text;
+}
+
+function storeMonthSeries(years) {
+    const entries = [];
+    years.slice().reverse().forEach((year) => {
+        (year.months || []).forEach((month) => {
+            if (!month.month) return;
+            entries.push(month.year ? month : Object.assign({ year: year.year }, month));
+        });
+    });
+    entries.sort((a, b) => a.year - b.year || a.month - b.month);
+    if (!entries.length) return [];
+    const first = entries[0];
+    const last = entries[entries.length - 1];
+    const byKey = new Map(entries.map((entry) => [entry.year + '-' + entry.month, entry]));
+    const rows = [];
+    let year = first.year;
+    let month = first.month;
+    const monthNames = getTranslation('months');
+    while (year < last.year || (year === last.year && month <= last.month)) {
+        const entry = byKey.get(year + '-' + month);
+        const amount = entry ? entry.amount : 0;
+        const name = String(entry && entry.name ? entry.name : (monthNames[month - 1] || month)).slice(0, 3);
+        rows.push({
+            label: name + ' ' + String(year).slice(2),
+            value: Math.abs(amount),
+            text: amount ? shortAmount(amount) : '',
+            title: name + ' ' + year + (entry ? ': ' + entry.totalLabel : '')
+        });
+        month += 1;
+        if (month > 12) {
+            month = 1;
+            year += 1;
+        }
+    }
+    return rows;
+}
+
 function yearBreakdownBlock(results) {
     const years = results.years || [];
     if (!years.length && !results.undatedLabel) return '';
+    const yearChart = GaijinPanel.lineChart(storeMonthSeries(years));
     const yearRows = years.map((year) => `
         <details style="margin-top: 6px;">
             <summary class="line summary-line">
@@ -621,6 +675,12 @@ function yearBreakdownBlock(results) {
                 <span class="line-money line-sum">${escapeHtml(year.totalLabel)}</span>
             </summary>
             <div class="nested">
+                ${GaijinPanel.lineChart(year.months.map((month) => ({
+                    label: String(month.name || '').slice(0, 3),
+                    value: month.amount,
+                    text: shortAmount(month.amount),
+                    title: (month.name || '') + ': ' + month.totalLabel
+                })))}
                 ${year.months.map((month) => `
                     <div class="line">
                         <span class="line-name">${month.icon} ${escapeHtml(month.name)}</span>
@@ -640,6 +700,8 @@ function yearBreakdownBlock(results) {
                 <span class="line-money line-sum">${escapeHtml(results.purchaseLabel)}</span>
             </summary>
             <div style="margin-top: 6px; padding-left: 4px;">
+                <div style="font-size:12px;color:#8a949e;margin-bottom:4px;">${escapeHtml(getTranslation('spent'))}</div>
+                ${yearChart}
                 ${yearRows}
                 ${undated}
             </div>
@@ -669,25 +731,7 @@ function displayResults(results) {
 
     const resultsContainer = document.createElement('div');
     resultsContainer.id = 'gaijin-purchase-summary';
-    resultsContainer.style.cssText = `
-        position: fixed;
-        top: 100px;
-        right: 20px;
-        background: #2d3a48;
-        padding: 20px;
-        border: 2px solid #27323f;
-        border-radius: 10px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-        z-index: 10000;
-        font-family: Arial, sans-serif;
-        width: 420px;
-        max-height: 85vh;
-        overflow-y: auto;
-        overflow-x: hidden;
-        scrollbar-gutter: stable;
-        color: #bac2c8;
-        box-sizing: border-box;
-    `;
+    resultsContainer.style.cssText = GaijinPanel.shellStyle(GaijinPanel.layout('storePanel').width);
 
     const storeName = results.storeType === 'pixstorm' ? getTranslation('pixstormStore') : getTranslation('gaijinStore');
     const shouldOpenExtendedStats = popupState.extendedStatsOpen;
@@ -756,18 +800,18 @@ function displayResults(results) {
                 text-wrap: balance;
                 overflow-wrap: normal;
             }
+            ${GaijinPanel.css('gaijin-purchase-summary')}
         </style>
-        <div style="font-weight: bold; color: #e1ce9b; margin-bottom: 14px; font-size: 18px; text-align: center;">
-            🎯 ${escapeHtml(getTranslation('purchaseStats'))}
-        </div>
-        <div style="font-size: 12px; color: #8a949e; text-align: center; margin-bottom: 10px;">
+        ${GaijinPanel.head('🎯 ' + getTranslation('purchaseStats'), currentLanguage)}
+        <div class="panel-body">
+        <div style="font-size: 13px; color: #8a949e; text-align: center; margin-bottom: 10px;">
             ${escapeHtml(storeName)}
         </div>
         <div style="margin-bottom: 10px; padding: 12px 10px; background: #27323f; border-radius: 6px; border: 1px solid #344150;">
             <div style="font-size: 12px; color: #8a949e; margin-bottom: 4px; text-align: center; text-transform: uppercase;">
                 ${escapeHtml(getTranslation('totalAmount'))}
             </div>
-            <div style="font-size: 24px; font-weight: bold; color: #19bcb7; text-align: center;">
+            <div style="font-size: 28px; font-weight: bold; color: #19bcb7; text-align: center;">
                 ${escapeHtml(results.totalLabel)}
             </div>
             <div class="total-caption" style="font-size: 11px; color: #8a949e; text-align: center; margin-top: 4px;">
@@ -776,15 +820,15 @@ function displayResults(results) {
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px;">
             <div style="background: #27323f; border-radius: 6px; padding: 8px 4px; text-align: center; border: 1px solid #344150;">
-                <div style="font-size: 10px; color: #8a949e; margin-bottom: 2px; text-transform: uppercase;">${escapeHtml(getTranslation('totalItems'))}</div>
+                <div style="font-size: 12px; color: #8a949e; margin-bottom: 2px; text-transform: uppercase;">${escapeHtml(getTranslation('totalItems'))}</div>
                 <div style="font-size: 16px; font-weight: bold; color: #bac2c8;">${results.totalItems}</div>
             </div>
             <div style="background: #27323f; border-radius: 6px; padding: 8px 4px; text-align: center; border: 1px solid #344150;">
-                <div style="font-size: 10px; color: #8a949e; margin-bottom: 2px; text-transform: uppercase;">${escapeHtml(getTranslation('paidItems'))}</div>
+                <div style="font-size: 12px; color: #8a949e; margin-bottom: 2px; text-transform: uppercase;">${escapeHtml(getTranslation('paidItems'))}</div>
                 <div style="font-size: 16px; font-weight: bold; color: #e1ce9b;">${results.paidItems}</div>
             </div>
             <div style="background: #27323f; border-radius: 6px; padding: 8px 4px; text-align: center; border: 1px solid #344150;">
-                <div style="font-size: 10px; color: #8a949e; margin-bottom: 2px; text-transform: uppercase;">${escapeHtml(getTranslation('freeItems'))}</div>
+                <div style="font-size: 12px; color: #8a949e; margin-bottom: 2px; text-transform: uppercase;">${escapeHtml(getTranslation('freeItems'))}</div>
                 <div style="font-size: 16px; font-weight: bold; color: #8a949e;">${results.freeItems}</div>
             </div>
         </div>
@@ -799,7 +843,7 @@ function displayResults(results) {
             </div>
         </div>
         <details id="extendedStats" ${shouldOpenExtendedStats ? 'open' : ''} style="margin-bottom: 12px; background: #27323f; border-radius: 6px; padding: 10px; border: 1px solid #344150;">
-            <summary class="line summary-line" style="color: #19bcb7; font-weight: bold; font-size: 13px;">
+            <summary class="line summary-line" style="color: #19bcb7; font-weight: bold; font-size: 15px;">
                 <span class="line-name"><span class="disclosure">▸</span> 📊 ${escapeHtml(getTranslation('extendedStats'))}</span>
             </summary>
             <div style="margin-top: 10px; border-top: 1px solid #344150; padding-top: 10px;">
@@ -817,8 +861,14 @@ function displayResults(results) {
         <button id="refreshPopupBtn" style="width: 100%; padding: 10px; background: #19bcb7; color: #2d3a48; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">
             🔄 ${escapeHtml(getTranslation('refreshButton'))}
         </button>
-        <div class="footnote" style="font-size: 11px; color: #8a949e; margin-top: 12px; text-align: center; border-top: 1px solid #27323f; padding-top: 8px;">
+        <div class="footnote" style="font-size: 12px; color: #8a949e; margin-top: 12px; text-align: center; border-top: 1px solid #27323f; padding-top: 8px;">
             ${escapeHtml(footerText)}
+        </div>
+        ${GaijinPanel.nav(getStoreType() === 'pixstorm' ? 'pixstorm' : 'gaijin', {
+            gaijin: getTranslation('gaijinStore'),
+            pixstorm: getTranslation('pixstormStore'),
+            market: getTranslation('marketPage')
+        })}
         </div>
     `;
 
@@ -887,6 +937,13 @@ function displayResults(results) {
 
     resultsContainer.appendChild(closeButton);
     document.body.appendChild(resultsContainer);
+    GaijinPanel.attach(resultsContainer, {
+        prefix: 'storePanel',
+        onLanguage: (lang) => {
+            chrome.storage.local.set({ language: lang });
+            setContentLanguage(lang);
+        }
+    });
     savePopupVisibilityState(true);
     notifyPopupAboutVisibility();
     publishResults(results);
@@ -986,8 +1043,9 @@ function startObserver() {
 function initExtension() {
     if (!isPurchasesPage()) return;
 
+    GaijinPanel.load('storePanel', () => {
     chrome.storage.local.get(['popupVisible', 'popupManuallyClosed', 'language'], (result) => {
-        if (result && result.language) currentLanguage = result.language;
+        if (result && result.language) currentLanguage = result.language === 'en' ? 'en' : 'ru';
         if (result && result.popupManuallyClosed !== undefined) {
             isPopupManuallyClosed = result.popupManuallyClosed;
         }
@@ -1003,6 +1061,7 @@ function initExtension() {
             publishResults(results);
             if (!isPopupManuallyClosed) displayResults(results);
         });
+    });
     });
 }
 

@@ -10,6 +10,13 @@ const translations = {
         openingLists: "Открываем списки покупок…",
         listsIncluded: "Свои покупки. Подарки вам в сумму не входят",
         scriptMissing: "Обновите вкладку с историей покупок и откройте расширение снова",
+        marketPage: "Биржа",
+        marketTitle: "Биржа",
+        marketNet: "Итог по журналу",
+        marketTopups: "Пополнения",
+        marketPurchases: "Покупки",
+        marketSales: "Продажи",
+        marketScriptMissing: "Обновите вкладку истории баланса и откройте расширение снова",
         welcomeTitle: "Добро пожаловать!",
         welcomeText: "Откройте страницу истории покупок в одном из поддерживаемых магазинов:",
         welcomeHint: "После перехода на страницу покупок откройте это расширение снова",
@@ -27,6 +34,13 @@ const translations = {
         openingLists: "Opening purchase lists…",
         listsIncluded: "Your purchases only. Gifts to you are not included",
         scriptMissing: "Reload the purchase history tab, then open the extension again",
+        marketPage: "Market",
+        marketTitle: "Market",
+        marketNet: "Ledger total",
+        marketTopups: "Top-ups",
+        marketPurchases: "Purchases",
+        marketSales: "Sales",
+        marketScriptMissing: "Reload the balance history tab, then open the extension again",
         welcomeTitle: "Welcome!",
         welcomeText: "Open the purchase history page in one of the supported stores:",
         welcomeHint: "After navigating to the purchase page, open this extension again",
@@ -51,6 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const langButtons = document.querySelectorAll('.lang-btn');
 
     let currentStoreType = null;
+    let pageMode = null;
     let currentLanguage = 'ru';
     let isLoading = false;
     let currentPopupVisible = true;
@@ -77,8 +92,8 @@ document.addEventListener('DOMContentLoaded', function() {
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
             if (!tabs || !tabs[0] || !tabs[0].url) return;
 
-            const storeType = isSupportedPage(tabs[0].url);
-            if (!storeType) return;
+            const page = pageKind(tabs[0].url);
+            if (!page) return;
 
             chrome.tabs.sendMessage(
                 tabs[0].id,
@@ -111,7 +126,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
         updateHeaderText();
         updateToggleButton();
+        applyTileLabels();
         if (lastResults) setStatus(lastResults);
+    }
+
+    function applyTileLabels() {
+        const texts = translations[currentLanguage];
+        const totalLabel = document.querySelector('[data-i18n="totalAmount"]');
+        const labels = document.querySelectorAll('#statsState .stat-tile-label');
+        statsState.classList.toggle('market-mode', pageMode === 'market');
+        if (pageMode !== 'market') return;
+        if (totalLabel) totalLabel.textContent = texts.marketNet;
+        if (labels[0]) labels[0].textContent = texts.marketTopups;
+        if (labels[1]) labels[1].textContent = texts.marketPurchases;
+        if (labels[2]) labels[2].textContent = texts.marketSales;
     }
 
     function updateRefreshButtonText() {
@@ -126,6 +154,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateHeaderText() {
         const texts = translations[currentLanguage];
         let storeName = '';
+
+        if (pageMode === 'market') {
+            headerText.textContent = texts.marketTitle;
+            return;
+        }
 
         if (currentStoreType === 'gaijin') {
             storeName = 'Gaijin Store';
@@ -149,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function isSupportedPage(url) {
+    function pageKind(url) {
         if (!url || typeof url !== 'string') return null;
         let parsed;
         try {
@@ -161,9 +194,11 @@ document.addEventListener('DOMContentLoaded', function() {
         let store = null;
         if (parsed.hostname === 'store.gaijin.net') store = 'gaijin';
         else if (parsed.hostname === 'store.pixstorm.ru') store = 'pixstorm';
-        if (!store || !parsed.pathname.endsWith('/user.php')) return null;
+        if (!store) return null;
+        if (parsed.pathname.endsWith('/balance_history.php')) return { store: store, mode: 'market' };
+        if (!parsed.pathname.endsWith('/user.php')) return null;
         if (parsed.searchParams.get('view') !== 'purchases') return null;
-        return store;
+        return { store: store, mode: 'store' };
     }
 
     function setStatus(results, errorText) {
@@ -177,6 +212,10 @@ document.addEventListener('DOMContentLoaded', function() {
             statusLine.textContent = '';
             return;
         }
+        if (results.mode === 'market') {
+            statusLine.textContent = results.footnote || '';
+            return;
+        }
         if (results.sectionsLoading) {
             statusLine.textContent = texts.openingLists;
             return;
@@ -184,25 +223,40 @@ document.addEventListener('DOMContentLoaded', function() {
         statusLine.textContent = texts.listsIncluded;
     }
 
-    function setUIState(storeType) {
+    function setUIState(storeType, mode) {
         currentStoreType = storeType;
+        pageMode = mode || null;
+        const marketLink = document.getElementById('marketPageLink');
 
         if (storeType) {
             statsState.classList.remove('hidden');
             welcomeState.classList.add('hidden');
             togglePopupBtn.classList.remove('hidden');
+            if (marketLink) marketLink.classList.toggle('hidden', pageMode !== 'store');
             updateHeaderText();
+            applyTileLabels();
             checkPopupState();
         } else {
             statsState.classList.add('hidden');
             welcomeState.classList.remove('hidden');
             togglePopupBtn.classList.add('hidden');
+            if (marketLink) marketLink.classList.add('hidden');
+            pageMode = null;
+            statsState.classList.remove('market-mode');
             updateHeaderText();
         }
     }
 
     function updateUI(results) {
         lastResults = results;
+        if (results.mode === 'market') {
+            totalAmount.textContent = results.netLabel || '0';
+            totalItems.textContent = results.topupLabel || '0';
+            paidItems.textContent = results.purchaseLabel || '0';
+            freeItems.textContent = results.saleLabel || '0';
+            setStatus(results);
+            return;
+        }
         totalAmount.textContent = results.totalLabel || '0';
         totalItems.textContent = results.totalItems;
         freeItems.textContent = results.freeItems;
@@ -232,30 +286,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            const storeType = isSupportedPage(tabs[0].url);
-            setUIState(storeType);
+            const page = pageKind(tabs[0].url);
+            setUIState(page && page.store, page && page.mode);
 
-            if (!storeType) {
+            if (!page) {
                 setLoadingState(false);
                 setStatus(null);
                 return;
             }
 
-            setStatus({ sectionsLoading: true });
+            if (page.mode === 'store') setStatus({ sectionsLoading: true });
 
             chrome.tabs.sendMessage(
                 tabs[0].id,
-                {action: "calculatePurchases"},
+                {action: page.mode === 'market' ? 'calculateMarket' : 'calculatePurchases'},
                 function(response) {
                     setLoadingState(false);
+                    const missing = page.mode === 'market'
+                        ? translations[currentLanguage].marketScriptMissing
+                        : translations[currentLanguage].scriptMissing;
                     if (chrome.runtime.lastError) {
-                        setStatus(null, translations[currentLanguage].scriptMissing);
+                        setStatus(null, missing);
                         return;
                     }
                     if (response && response.success && response.results) {
                         updateUI(response.results);
                     } else {
-                        setStatus(null, translations[currentLanguage].scriptMissing);
+                        setStatus(null, missing);
                     }
                 }
             );
@@ -275,10 +332,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (response && response.success) {
                         currentPopupVisible = newVisibilityState;
                         updateToggleButton();
-                        chrome.storage.local.set({
-                            popupVisible: newVisibilityState,
-                            popupManuallyClosed: !newVisibilityState
-                        });
+                        saveVisibility(newVisibilityState);
                     }
                 }
             );
@@ -296,10 +350,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (response && response.success) {
                         currentPopupVisible = response.isVisible;
                         updateToggleButton();
-                        chrome.storage.local.set({
-                            popupVisible: response.isVisible,
-                            popupManuallyClosed: !response.isVisible
-                        });
+                        saveVisibility(response.isVisible);
                     }
                 }
             );
@@ -316,27 +367,47 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     chrome.runtime.onMessage.addListener(function(request) {
-        if (request.action === "purchaseResults" && request.results && currentStoreType) {
+        if (request.action === "purchaseResults" && request.results && pageMode === 'store') {
+            updateUI(request.results);
+        }
+        if (request.action === "marketResults" && request.results && pageMode === 'market') {
             updateUI(request.results);
         }
         if (request.action === "popupVisibilityChanged") {
             currentPopupVisible = request.isVisible;
             updateToggleButton();
-            chrome.storage.local.set({
-                popupVisible: request.isVisible,
-                popupManuallyClosed: !request.isVisible
-            });
+            saveVisibility(request.isVisible);
         }
     });
+
+    function saveVisibility(isVisible) {
+        if (pageMode === 'market') {
+            chrome.storage.local.set({
+                marketPopupVisible: isVisible,
+                marketPopupManuallyClosed: !isVisible
+            });
+            return;
+        }
+        chrome.storage.local.set({
+            popupVisible: isVisible,
+            popupManuallyClosed: !isVisible
+        });
+    }
 
     function forceSyncPopupState() {
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
             if (!tabs || !tabs[0] || !tabs[0].url) return;
-            const storeType = isSupportedPage(tabs[0].url);
-            if (!storeType) return;
+            const page = pageKind(tabs[0].url);
+            if (!page) return;
             checkPopupState();
         });
     }
+
+    chrome.storage.onChanged.addListener(function(changes, area) {
+        if (area !== 'local' || !changes.language || !changes.language.newValue) return;
+        if (changes.language.newValue === currentLanguage) return;
+        setLanguage(changes.language.newValue === 'en' ? 'en' : 'ru');
+    });
 
     chrome.storage.local.get(['language', 'popupVisible'], function(result) {
         if (result && result.language) {
